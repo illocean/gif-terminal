@@ -53,10 +53,15 @@ try:
         STATS["issues"] += r.get("open_issues_count", 0)
     STATS["langs"] = [l for l,_ in sorted(lc.items(), key=lambda x: -x[1])[:4]]
 
-    cq = f"author:{USERNAME}"
-    cs = requests.get(f"https://api.github.com/search/commits?q={cq}&per_page=1&sort=author-date&order=desc", headers=HDR2, timeout=10).json()
-    if "total_count" in cs:
-        STATS["commits"] = cs["total_count"]
+    try:
+        c_hdr = dict(HDR2)
+        c_hdr["Accept"] = "application/vnd.github.cloak-preview"
+        cq = f"author:{USERNAME}"
+        cs = requests.get(f"https://api.github.com/search/commits?q={cq}&per_page=1", headers=c_hdr, timeout=10).json()
+        if "total_count" in cs:
+            STATS["commits"] = cs["total_count"]
+    except:
+        pass
 
     pq = f"is:pr author:{USERNAME} is:merged"
     pr = requests.get(f"https://api.github.com/search/issues?q={pq}&per_page=1", headers=HDR2, timeout=10).json()
@@ -144,19 +149,19 @@ t = gifos.Terminal(width=WIN_W, height=450, xpad=10, ypad=10)
 t.set_prompt(f"\x1b[92m{USERNAME}\x1b[0m@\x1b[96mpandadoor\x1b[0m $ ")
 
 t.gen_text("\x1b[92m[OK]\x1b[0m Reached target.", row_num=1)
-t.clone_frame(4)
+t.clone_frame(2)
 t.gen_text("\x1b[92m[OK]\x1b[0m Session ready.", row_num=2)
-t.clone_frame(4)
+t.clone_frame(2)
 t.gen_text("\x1b[92m[OK]\x1b[0m Profile service started.", row_num=3)
-t.clone_frame(10)
+t.clone_frame(5)
 
 t.gen_prompt(row_num=4)
-t.gen_typing_text("stats --user " + USERNAME, row_num=4, contin=True, speed=1)
-t.clone_frame(4)
+t.gen_typing_text("stats --user " + USERNAME, row_num=4, contin=True, speed=2)
+t.clone_frame(2)
 
 t.gen_text("", row_num=5)
 t.gen_text(f"\x1b[96m--- {USERNAME} ---\x1b[0m", row_num=6)
-t.clone_frame(3)
+t.clone_frame(2)
 
 if has_stats:
     sl = [
@@ -179,25 +184,25 @@ else:
 
 for l in sl:
     t.gen_text(l, row_num=7+sl.index(l))
-    t.clone_frame(2)
+    t.clone_frame(1)
 
-t.clone_frame(6)
+t.clone_frame(3)
 t.gen_text("\x1b[96m---\x1b[0m", row_num=7+len(sl))
-t.clone_frame(4)
+t.clone_frame(2)
 
 b = 8 + len(sl)
 t.gen_prompt(row_num=b)
-t.gen_typing_text("clear", row_num=b, contin=True, speed=1)
-t.clone_frame(3)
+t.gen_typing_text("clear", row_num=b, contin=True, speed=2)
+t.clone_frame(2)
 t.clear_frame()
 
 t.gen_prompt(row_num=1)
-t.gen_typing_text("cat skills.txt", row_num=1, contin=True, speed=1)
-t.clone_frame(4)
+t.gen_typing_text("cat skills.txt", row_num=1, contin=True, speed=2)
+t.clone_frame(2)
 
 t.gen_text("", row_num=2)
 t.gen_text("\x1b[96m--- Tech Stack ---\x1b[0m", row_num=3)
-t.clone_frame(3)
+t.clone_frame(2)
 
 SKILL_LABELS = [
     ("Languages", "C, C++, C#, Java, JavaScript, TypeScript, PHP, COBOL"),
@@ -209,11 +214,11 @@ SKILL_LABELS = [
 for i, (lb, vl) in enumerate(SKILL_LABELS):
     sp = " " * max(1, 12 - len(lb))
     t.gen_text(f"\x1b[94m{lb}:{sp}\x1b[0m {vl}", row_num=4+i)
-    t.clone_frame(2)
+    t.clone_frame(1)
 
-t.clone_frame(6)
+t.clone_frame(3)
 t.gen_text("\x1b[96m---\x1b[0m", row_num=4+5)
-t.clone_frame(10)
+t.clone_frame(5)
 
 base_c, ch = prep()
 post(base_c, ch)
