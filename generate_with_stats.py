@@ -25,16 +25,6 @@ USERNAME = (
     or "dbuzatto"
 )
 
-# Function to fetch real number of repos
-def get_total_repos(username):
-    try:
-        response = requests.get(f"https://api.github.com/users/{username}")
-        if response.status_code == 200:
-            return response.json().get("public_repos", 0)
-    except:
-        pass
-    return None
-
 # Try to fetch GitHub statistics
 try:
     github_stats = gifos.utils.fetch_github_stats(user_name=USERNAME)
@@ -47,9 +37,6 @@ except Exception as e:
     print("Using example data...")
     has_stats = False
     github_stats = None
-
-# Fetch real number of repos
-total_repos = get_total_repos(USERNAME)
 
 # Terminal settings
 t = gifos.Terminal(width=700, height=450, xpad=10, ypad=10)
@@ -74,17 +61,16 @@ t.gen_text(f"\x1b[96m=== GitHub Stats for {USERNAME} ===\x1b[0m", row_num=5)
 t.clone_frame(3)
 
 if has_stats:
-    repos_count = total_repos if total_repos else github_stats.total_repo_contributions
     stats_lines = [
         f"\x1b[93mName:\x1b[0m        {github_stats.account_name or USERNAME}",
-        f"\x1b[93mFollowers:\x1b[0m   {github_stats.total_followers}",
-        f"\x1b[93mStars:\x1b[0m       {github_stats.total_stargazers}",
         f"\x1b[93mCommits:\x1b[0m     {github_stats.total_commits_last_year} (last year)",
-        f"\x1b[93mPRs:\x1b[0m         {github_stats.total_pull_requests_made}",
-        f"\x1b[93mIssues:\x1b[0m      {github_stats.total_issues}",
-        f"\x1b[93mRepos:\x1b[0m       {repos_count}",
-        f"\x1b[93mRank:\x1b[0m        {github_stats.user_rank.level} ({github_stats.user_rank.percentile:.1f}%)",
     ]
+
+    # Top languages
+    if github_stats.languages_sorted:
+        top_langs = github_stats.languages_sorted[:3]
+        langs_str = ", ".join([f"{lang[0]} ({lang[1]}%)" for lang in top_langs])
+        stats_lines.append(f"\x1b[93mTop Langs:\x1b[0m   {langs_str}")
     
     # Top languages
     if github_stats.languages_sorted:
@@ -95,13 +81,7 @@ else:
     # Example data
     stats_lines = [
         f"\x1b[93mName:\x1b[0m        {USERNAME}",
-        "\x1b[93mFollowers:\x1b[0m   --",
-        "\x1b[93mStars:\x1b[0m       --",
         "\x1b[93mCommits:\x1b[0m     -- (configure GITHUB_TOKEN)",
-        "\x1b[93mPRs:\x1b[0m         --",
-        "\x1b[93mIssues:\x1b[0m      --",
-        "\x1b[93mRepos:\x1b[0m       --",
-        "\x1b[93mRank:\x1b[0m        --",
     ]
 
 for i, line in enumerate(stats_lines):
@@ -127,13 +107,11 @@ t.gen_text("\x1b[96m=== Tech Stack ===\x1b[0m", row_num=3)
 t.clone_frame(3)
 
 skills = [
-    ("\x1b[94mCloud:\x1b[0m       ", "AWS, GCP, OCI, Cloudflare"),
-    ("\x1b[94mDevOps:\x1b[0m      ", "Terraform, Kubernetes, Docker, Git"),
-    ("\x1b[94mCI/CD:\x1b[0m       ", "GitLab, GitHub Actions"),
-    ("\x1b[94mMonitoring:\x1b[0m  ", "Grafana, Prometheus, Jaeger, Loki"),
-    ("\x1b[94mTools:\x1b[0m       ", "Postman, RabbitMQ, MongoDB"),
-    ("\x1b[94mOS:\x1b[0m          ", "macOS, Debian"),
-    ("\x1b[94mLanguages:\x1b[0m   ", "Java, Python"),
+    ("\x1b[94mLanguages:\x1b[0m  ", "C++, C, Java, JavaScript, TypeScript"),
+    ("\x1b[94mWeb:\x1b[0m        ", "PHP, Laravel, HTML, CSS"),
+    ("\x1b[94mDatabase:\x1b[0m   ", "PostgreSQL, MySQL, SQL"),
+    ("\x1b[94mTools:\x1b[0m      ", "Git, VS Code, Visual Studio"),
+    ("\x1b[94mOther:\x1b[0m      ", "C#, COBOL, VB.NET, Tcl"),
 ]
 
 for i, (label, value) in enumerate(skills):
