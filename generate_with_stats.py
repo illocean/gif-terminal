@@ -1,13 +1,28 @@
-import os, sys, subprocess, requests
-from datetime import datetime
+import gifos
+import os, glob, requests
+from PIL import Image, ImageFilter, ImageDraw, ImageFont, ImageChops
+from gifos.utils.convert_ansi_escape import ConvertAnsiEscape
 
-try:
-    from asciimatics.renderers import FigletText
-except ImportError:
-    subprocess.check_call([sys.executable, "-m", "pip", "install", "asciimatics", "-q"])
-    from asciimatics.renderers import FigletText
-
-from PIL import Image, ImageDraw, ImageFont
+# ============================================
+# ANSI colour overrides — Tango palette
+# ============================================
+ConvertAnsiEscape.ANSI_ESCAPE_MAP_TXT_COLOR.update({
+    "39": "#F2F2F2",
+    "31": "#CC0000",
+    "32": "#4EAA25",
+    "33": "#C4A000",
+    "34": "#3465A4",
+    "35": "#75507B",
+    "36": "#06989A",
+    "37": "#D3D7CF",
+    "91": "#EF2929",
+    "92": "#8AE234",
+    "93": "#FCE94F",
+    "94": "#729FCF",
+    "95": "#AD7FA8",
+    "96": "#34E2E2",
+    "97": "#EEEEEC",
+})
 
 USERNAME = (
     os.environ.get("GITHUB_REPOSITORY_OWNER")
@@ -15,265 +30,261 @@ USERNAME = (
     or "pandadoor"
 )
 
-W = 720
-H = 480
-FS = 14
-LH = 22
-MG = 20
+# ===== Layout =====
+GIF_W, GIF_H  = 740, 540
+WIN_X, WIN_Y  = 20, 20
+WIN_W         = 700
+TITLE_H       = 28
+MENU_H        = 22
+HEADER_H      = TITLE_H + MENU_H
+WIN_H         = HEADER_H + 450
+TERMINAL_X    = WIN_X
+TERMINAL_Y    = WIN_Y + HEADER_H
+CORNER_RADIUS = 6
+BG_COLOR      = (12, 14, 15)
+FRAMES_DIR    = "./frames"
+FRAME_BASE    = "frame_"
+OUTPUT_GIF    = "output.gif"
+GIFOS_FPS     = 20
 
-frames = []
-
-class Frame:
-    def __init__(self):
-        self.img = Image.new("RGB", (W, H), (8, 8, 12))
-        self.d = ImageDraw.Draw(self.img)
-        try:
-            self.f = ImageFont.truetype("DejaVuSansMono.ttf", FS)
-        except:
-            self.f = ImageFont.load_default()
-        self.y = 14
-
-    def l(self, txt, c=(200, 200, 200)):
-        self.d.text((MG, self.y), txt, fill=c, font=self.f)
-        self.y += LH
-        return self
-
-    def g(self):
-        self.y += LH
-        return self
-
-    def kv(self, k, v, vc=(200, 200, 200)):
-        self.d.text((MG, self.y), k, fill=(255, 200, 0), font=self.f)
-        kw = self.d.textlength(k, font=self.f)
-        self.d.text((MG + kw, self.y), v, fill=vc, font=self.f)
-        self.y += LH
-        return self
-
-    def fig(self, txt, c=(0, 200, 255)):
-        ft = FigletText(txt, font="big")
-        for line in str(ft.rendered_text).split("\n"):
-            if line.strip():
-                self.d.text((MG, self.y), line, fill=c, font=self.f)
-                self.y += LH
-        return self
-
-    def end(self):
-        frames.append(self.img)
-
-def hold(n=8):
-    for _ in range(n):
-        frames.append(frames[-1])
-
-stats = {}
+# ===== GitHub stats =====
+total_repos = 0
+github_stats = None
+has_stats = False
 try:
     r = requests.get(f"https://api.github.com/users/{USERNAME}", timeout=10)
-    if r.ok:
-        d = r.json()
-        stats["repos"] = d.get("public_repos", 0)
-    tok = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN")
-    hdrs = {"Authorization": f"Bearer {tok}"} if tok else {}
-    r2 = requests.get(f"https://api.github.com/users/{USERNAME}/repos?per_page=100&sort=pushed", headers=hdrs, timeout=10)
-    if r2.ok:
-        lc = {}
-        for repo in r2.json():
-            l = repo.get("language")
-            if l:
-                lc[l] = lc.get(l, 0) + 1
-        stats["langs"] = [l for l, _ in sorted(lc.items(), key=lambda x: -x[1])[:5]]
-except:
-    pass
+    if r.status_code == 200:
+        total_repos = r.json().get("public_repos", 0)
+    github_stats = gifos.utils.fetch_github_stats(user_name=USERNAME)
+    has_stats = github_stats is not None
+except Exception as e:
+    print(f"Warning: {e}")
 
-# ============ BOOT SEQUENCE (line by line, visible) ============
-f = Frame()
-f.fig("PANDADOR")
-f.l("  DIT Student @ PUP Taguig", c=(100, 100, 120))
-f.end()
-hold(10)
+# ===== Debian theme helpers =====
+def _scale_crop(img, tw, th):
+    w, h = img.size
+    if w/h > tw/th:
+        nh, nw = th, int(th * w/h)
+    else:
+        nw, nh = tw, int(tw * h/w)
+    s = img.resize((nw, nh), Image.LANCZOS)
+    l = (nw - tw) // 2
+    t = (nh - th) // 2
+    return s.crop((l, t, l+tw, t+th))
 
-f = Frame()
-f.fig("PANDADOR")
-f.l("", c=(50, 50, 50))
-f.l("  >> Booting system...", c=(0, 200, 0))
-f.end()
-hold(8)
+def _blend(base, overlay):
+    return Image.alpha_composite(base.convert("RGBA"), overlay).convert("RGB")
 
-f = Frame()
-f.fig("PANDADOR")
-f.l("", c=(50, 50, 50))
-f.l("  >> Booting system... [OK]", c=(0, 200, 0))
-f.l("  >> Loading kernel modules...", c=(0, 200, 0))
-f.end()
-hold(8)
+def _font(size=11):
+    try: return ImageFont.load_default(size=size)
+    except TypeError: return ImageFont.load_default()
 
-f = Frame()
-f.fig("PANDADOR")
-f.l("", c=(50, 50, 50))
-f.l("  >> Booting system... [OK]", c=(0, 200, 0))
-f.l("  >> Loading kernel modules... [OK]", c=(0, 200, 0))
-f.l("  >> Initializing display...", c=(0, 200, 0))
-f.end()
-hold(8)
+def chroma_mask(frame):
+    bg = Image.new("RGB", frame.size, BG_COLOR)
+    diff = ImageChops.difference(frame, bg)
+    r, g, b = diff.split()
+    m = ImageChops.lighter(ImageChops.lighter(r, g), b)
+    return m.point(lambda p: 255 if p > 0 else 0)
 
-f = Frame()
-f.fig("PANDADOR")
-f.l("", c=(50, 50, 50))
-f.l("  >> Booting system... [OK]", c=(0, 200, 0))
-f.l("  >> Loading kernel modules... [OK]", c=(0, 200, 0))
-f.l("  >> Initializing display... [OK]", c=(0, 200, 0))
-f.l("  >> Fetching GitHub data...", c=(0, 200, 0))
-f.end()
-hold(8)
+def prepare_layers(wallpaper_path):
+    wp = Image.open(wallpaper_path).convert("RGB")
+    bg = _scale_crop(wp, GIF_W, GIF_H)
+    shadow = Image.new("RGBA", (GIF_W, GIF_H), (0,0,0,0))
+    ImageDraw.Draw(shadow).rounded_rectangle(
+        [(WIN_X+4, WIN_Y+6), (WIN_X+WIN_W+4, WIN_Y+WIN_H+6)],
+        radius=CORNER_RADIUS, fill=(0,0,0,150))
+    shadow = shadow.filter(ImageFilter.GaussianBlur(radius=10))
+    base = _blend(bg, shadow)
 
-f = Frame()
-f.fig("PANDADOR")
-f.l("", c=(50, 50, 50))
-f.l("  >> Booting system... [OK]", c=(0, 200, 0))
-f.l("  >> Loading kernel modules... [OK]", c=(0, 200, 0))
-f.l("  >> Initializing display... [OK]", c=(0, 200, 0))
-f.l("  >> Fetching GitHub data... [OK]", c=(0, 200, 0))
-f.l("  >> Profile loaded. Ready.", c=(0, 200, 0))
-f.end()
-hold(15)
+    def frost(reg, blur, tint):
+        bl = reg.filter(ImageFilter.GaussianBlur(radius=blur))
+        return _blend(bl, Image.new("RGBA", bl.size, tint))
 
-# ============ PROFILE (line by line typing) ============
-items = [
-    ("name     ", "Kim Phillip G. Andador",    (255, 255, 255)),
-    ("handle   ", USERNAME,                   (0, 200, 255)),
-    ("school   ", "PUP Taguig - DIT (2nd)",   (255, 255, 255)),
-    ("location ", "Paranaque City, PH",        (255, 255, 255)),
-    ("email    ", "andadorkimphillip@gmail.com", (0, 200, 255)),
-    ("github   ", f"github.com/{USERNAME}",   (0, 200, 255)),
-]
+    tr = bg.crop((WIN_X, WIN_Y, WIN_X+WIN_W, WIN_Y+TITLE_H))
+    mr = bg.crop((WIN_X, WIN_Y+TITLE_H, WIN_X+WIN_W, WIN_Y+HEADER_H))
+    cr = bg.crop((TERMINAL_X, TERMINAL_Y, TERMINAL_X+WIN_W, TERMINAL_Y+450))
 
-f = Frame()
-f.l("  $ cat profile.txt", c=(0, 200, 0))
-f.g()
-f.end()
-hold(6)
+    ft = frost(tr, 6, (32,32,36,220))
+    fm = frost(mr, 4, (40,40,44,215))
+    fc = frost(cr, 8, (18,18,23,215))
 
-for n in range(len(items)):
-    f = Frame()
-    f.l("  $ cat profile.txt", c=(0, 200, 0))
-    f.g()
-    for j, (k, v, vc) in enumerate(items):
-        if j <= n:
-            f.kv(f"  {k}", v, vc)
-        else:
-            f.l("")
-    f.end()
-    hold(5)
+    win = Image.new("RGB", (WIN_W, WIN_H))
+    win.paste(ft, (0,0))
+    win.paste(fm, (0,TITLE_H))
+    win.paste(fc, (0,HEADER_H))
 
-f = Frame()
-f.l("  $ cat profile.txt", c=(0, 200, 0))
-f.g()
-for k, v, vc in items:
-    f.kv(f"  {k}", v, vc)
-f.g()
-f.l("  Building software, solving problems, learning daily.", c=(120, 120, 120))
-f.end()
-hold(15)
+    mask = Image.new("L", (WIN_W, WIN_H), 0)
+    ImageDraw.Draw(mask).rounded_rectangle([(0,0),(WIN_W-1,WIN_H-1)], radius=CORNER_RADIUS, fill=255)
+    base.paste(win, (WIN_X, WIN_Y), mask)
 
-# ============ SKILLS (line by line typing) ============
+    chrome = Image.new("RGBA", (GIF_W, GIF_H), (0,0,0,0))
+    d = ImageDraw.Draw(chrome)
+    d.rounded_rectangle([(WIN_X,WIN_Y),(WIN_X+WIN_W-1,WIN_Y+WIN_H-1)],
+        radius=CORNER_RADIUS, outline=(255,255,255,40), width=1)
+    d.line([(WIN_X+CORNER_RADIUS,WIN_Y+TITLE_H),(WIN_X+WIN_W-CORNER_RADIUS,WIN_Y+TITLE_H)],
+        fill=(255,255,255,30), width=1)
+    d.line([(WIN_X+CORNER_RADIUS,WIN_Y+HEADER_H),(WIN_X+WIN_W-CORNER_RADIUS,WIN_Y+HEADER_H)],
+        fill=(255,255,255,25), width=1)
+
+    tf = _font(11)
+    d.text((WIN_X+10, WIN_Y+(TITLE_H-11)//2), f"{USERNAME}@debian: ~",
+        fill=(210,210,210,230), font=tf)
+
+    br, by = 7, WIN_Y + TITLE_H//2
+    cx = WIN_X + WIN_W - 14
+    mx = cx - 22
+    nx = mx - 22
+    d.ellipse([(cx-br, by-br), (cx+br, by+br)], fill=(180,24,24,235), outline=(220,60,60,180))
+    d.ellipse([(mx-br, by-br), (mx+br, by+br)], fill=(65,65,70,210), outline=(100,100,105,160))
+    d.ellipse([(nx-br, by-br), (nx+br, by+br)], fill=(65,65,70,210), outline=(100,100,105,160))
+
+    mf = _font(10)
+    mx2 = WIN_X + 8
+    my2 = WIN_Y + TITLE_H + (MENU_H - 10)//2
+    for item in ["File","Edit","View","Search","Terminal","Help"]:
+        d.text((mx2, my2), item, fill=(200,200,200,220), font=mf)
+        mx2 += len(item)*6 + 12
+
+    return base, chrome
+
+def post_process(base, chrome, frames_dir=FRAMES_DIR):
+    files = sorted(glob.glob(f"{frames_dir}/{FRAME_BASE}*.png"),
+        key=lambda x: int(os.path.splitext(os.path.basename(x))[0].split("_")[1]))
+    print(f"Post-processing {len(files)} frames with Debian theme...")
+    for fp in files:
+        tf = Image.open(fp).convert("RGB")
+        c = base.copy()
+        c.paste(tf, (TERMINAL_X, TERMINAL_Y), chroma_mask(tf))
+        c = Image.alpha_composite(c.convert("RGBA"), chrome).convert("RGB")
+        c.save(fp, "PNG")
+    print("Done.")
+
+# ===== Terminal content (gifos) =====
+t = gifos.Terminal(width=WIN_W, height=450, xpad=10, ypad=10)
+t.set_prompt(f"\x1b[92m{USERNAME}\x1b[0m@\x1b[91mdebian\x1b[0m:\x1b[94m~\x1b[0m$ ")
+
+# Boot
+t.gen_text("\x1b[92m[  OK  ]\x1b[0m Started Session Manager.", row_num=1)
+t.clone_frame(6)
+t.gen_text("\x1b[92m[  OK  ]\x1b[0m Reached target Graphical Interface.", row_num=2)
+t.clone_frame(6)
+t.gen_text("\x1b[92m[  OK  ]\x1b[0m Created user slice for pandadoor.", row_num=3)
+t.clone_frame(6)
+t.gen_text("\x1b[92m[  OK  ]\x1b[0m Started GitHub Profile Service.", row_num=4)
+t.clone_frame(12)
+
+# Stats command
+t.gen_prompt(row_num=5)
+t.gen_typing_text("./github-stats --user " + USERNAME, row_num=5, contin=True, speed=1)
+t.clone_frame(6)
+
+t.gen_text("", row_num=6)
+t.gen_text(f"\x1b[96m=== GitHub Overview for {USERNAME} ===\x1b[0m", row_num=7)
+t.clone_frame(4)
+
+if has_stats:
+    rc = total_repos if total_repos else github_stats.total_repo_contributions
+    sl = [
+        f"\x1b[93mName:\x1b[0m        {github_stats.account_name or USERNAME}",
+        f"\x1b[93mRepos:\x1b[0m       {rc}",
+        f"\x1b[93mCommits:\x1b[0m     {github_stats.total_commits_last_year} (last year)",
+        f"\x1b[93mStars:\x1b[0m       {github_stats.total_stargazers}",
+        f"\x1b[93mPRs:\x1b[0m         {github_stats.total_pull_requests_made}",
+        f"\x1b[93mIssues:\x1b[0m      {github_stats.total_issues}",
+        f"\x1b[93mFollowers:\x1b[0m   {github_stats.total_followers}",
+    ]
+    if github_stats.languages_sorted:
+        top3 = github_stats.languages_sorted[:3]
+        ls = ", ".join([f"{l[0]} ({l[1]:.0f}%)" for l in top3])
+        sl.append(f"\x1b[93mTop Langs:\x1b[0m   {ls}")
+else:
+    sl = [
+        f"\x1b[93mName:\x1b[0m        Kim Phillip G. Andador",
+        f"\x1b[93mRepos:\x1b[0m       {total_repos}",
+        "\x1b[93mCommits:\x1b[0m     --",
+        "\x1b[93mStars:\x1b[0m       --",
+        "\x1b[93mPRs:\x1b[0m         --",
+        "\x1b[93mIssues:\x1b[0m      --",
+        "\x1b[93mFollowers:\x1b[0m   --",
+    ]
+
+for i, line in enumerate(sl):
+    t.gen_text(line, row_num=8+i)
+    t.clone_frame(3)
+
+t.clone_frame(12)
+t.gen_text("\x1b[96m================================\x1b[0m", row_num=8+len(sl))
+t.clone_frame(8)
+
+# Clear + skills
+bot = 9 + len(sl)
+t.gen_prompt(row_num=bot)
+t.gen_typing_text("clear", row_num=bot, contin=True, speed=1)
+t.clone_frame(5)
+t.clear_frame()
+
+t.gen_prompt(row_num=1)
+t.gen_typing_text("cat skills.txt", row_num=1, contin=True, speed=1)
+t.clone_frame(6)
+
+t.gen_text("", row_num=2)
+t.gen_text("\x1b[96m=== Tech Stack ===\x1b[0m", row_num=3)
+t.clone_frame(4)
+
 skills = [
-    ("Languages", "C, C++, C#, Java, JavaScript, TypeScript, COBOL, VB.NET"),
-    ("Web      ", "PHP, Laravel, HTML, CSS"),
-    ("Database ", "PostgreSQL, MySQL, SQLite"),
-    ("Tools    ", "Git, VS Code, Visual Studio, .NET, Node.js"),
-    ("Platforms", "Windows, Linux"),
+    ("\x1b[94mLanguages:\x1b[0m  ", "C, C++, C#, Java, JavaScript, TypeScript, PHP, COBOL"),
+    ("\x1b[94mWeb:\x1b[0m        ", "Laravel, HTML, CSS"),
+    ("\x1b[94mDatabase:\x1b[0m   ", "PostgreSQL, MySQL, SQL"),
+    ("\x1b[94mTools:\x1b[0m      ", "Git, VS Code, Visual Studio, .NET, Node.js"),
+    ("\x1b[94mPlatforms:\x1b[0m  ", "Windows, Linux"),
+    ("\x1b[94mDomains:\x1b[0m    ", "Software Dev, IT Support, Troubleshooting"),
 ]
 
-f = Frame()
-f.l("  $ cat skills.txt", c=(0, 200, 0))
-f.g()
-f.end()
-hold(6)
+for i, (label, value) in enumerate(skills):
+    t.gen_text(f"{label}{value}", row_num=4+i)
+    t.clone_frame(2)
 
-for n in range(len(skills)):
-    f = Frame()
-    f.l("  $ cat skills.txt", c=(0, 200, 0))
-    f.g()
-    for j, (k, v) in enumerate(skills):
-        if j <= n:
-            f.kv(f"  {k}", v, (255, 255, 255))
-        else:
-            f.l("")
-    f.end()
-    hold(4)
+t.clone_frame(12)
+t.gen_text("\x1b[96m================================\x1b[0m", row_num=4+len(skills))
+t.clone_frame(6)
 
-hold(8)
+fr = 5 + len(skills)
+t.gen_prompt(row_num=fr)
+t.gen_typing_text("echo 'Thanks for visiting!'", row_num=fr, contin=True, speed=1)
+t.clone_frame(6)
+t.gen_text("\x1b[92mThanks for visiting!\x1b[0m", row_num=fr+1)
+t.clone_frame(50)
 
-# ============ LIVE LANGUAGES ============
-if stats.get("langs"):
-    f = Frame()
-    f.l("  $ cat skills.txt", c=(0, 200, 0))
-    f.g()
-    f.l("  Active Languages (from repos):", c=(255, 200, 0))
-    f.end()
-    hold(6)
-    for lang in stats["langs"]:
-        f = Frame()
-        f.l("  $ cat skills.txt", c=(0, 200, 0))
-        f.g()
-        f.l("  Active Languages (from repos):", c=(255, 200, 0))
-        idx = stats["langs"].index(lang)
-        for i, l2 in enumerate(stats["langs"]):
-            if i <= idx:
-                f.l(f"    - {l2}", c=(0, 200, 255))
-        f.end()
-        hold(5)
-    hold(10)
+# ===== Post-process + GIF =====
+base_canvas, chrome = prepare_layers("assets/debian_wallpaper.png")
+post_process(base_canvas, chrome)
+t.gen_gif()
 
-# ============ CONTACT ============
-f = Frame()
-f.fig("CONTACT", c=(0, 200, 255))
-f.g()
-f.end()
-hold(8)
+_SIZE_HINTS = [
+    (180,24,24),(239,41,41),(78,170,37),(138,226,52),(196,160,0),(252,233,79),
+    (52,101,164),(114,159,207),(117,80,123),(173,127,168),(6,152,154),(52,226,226),
+    (211,215,207),(238,238,236),(242,242,242),(65,65,70),(210,210,210),(200,200,200),
+]
 
-f = Frame()
-f.fig("CONTACT", c=(0, 200, 255))
-f.g()
-f.kv("  GitHub   ", f"https://github.com/{USERNAME}", (0, 200, 255))
-f.end()
-hold(5)
+if not os.path.exists(OUTPUT_GIF):
+    print("Assembling GIF with PIL fallback...")
+    files = sorted(glob.glob(f"{FRAMES_DIR}/{FRAME_BASE}*.png"),
+        key=lambda x: int(os.path.splitext(os.path.basename(x))[0].split("_")[1]))
+    n = len(_SIZE_HINTS)
+    hint = Image.new("RGB", (n, 8))
+    for i, c in enumerate(_SIZE_HINTS):
+        for y in range(8): hint.putpixel((i, y), c)
+    first = Image.open(files[0]).convert("RGB")
+    hinted = first.copy()
+    hinted.paste(hint, (0, 0))
+    pal = hinted.quantize(colors=250, method=Image.Quantize.FASTOCTREE, dither=0)
+    frames_q = []
+    for f in files:
+        frames_q.append(Image.open(f).convert("RGB").quantize(palette=pal, dither=1))
+    dms = max(1, round(1000 / GIFOS_FPS))
+    frames_q[0].save(OUTPUT_GIF, save_all=True, append_images=frames_q[1:],
+        loop=0, duration=dms, optimize=False)
+    print(f"GIF saved: {OUTPUT_GIF}")
 
-f = Frame()
-f.fig("CONTACT", c=(0, 200, 255))
-f.g()
-f.kv("  GitHub   ", f"https://github.com/{USERNAME}", (0, 200, 255))
-f.kv("  Email    ", "andadorkimphillip@gmail.com", (0, 200, 255))
-f.end()
-hold(5)
-
-f = Frame()
-f.fig("CONTACT", c=(0, 200, 255))
-f.g()
-f.kv("  GitHub   ", f"https://github.com/{USERNAME}", (0, 200, 255))
-f.kv("  Email    ", "andadorkimphillip@gmail.com", (0, 200, 255))
-f.kv("  Location ", "Paranaque City, Philippines", (255, 255, 255))
-f.end()
-hold(5)
-
-dt = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
-f = Frame()
-f.fig("CONTACT", c=(0, 200, 255))
-f.g()
-f.kv("  GitHub   ", f"https://github.com/{USERNAME}", (0, 200, 255))
-f.kv("  Email    ", "andadorkimphillip@gmail.com", (0, 200, 255))
-f.kv("  Location ", "Paranaque City, Philippines", (255, 255, 255))
-f.g()
-f.l(f"  Last updated: {dt}", c=(80, 80, 80))
-f.g()
-f.l("  Thank you for visiting!", c=(0, 200, 100))
-f.l("  Have a great day!", c=(0, 200, 100))
-f.end()
-hold(20)
-
-# ============ EXPORT GIF ============
-DUR_MS = 180
-frames[0].save("output.gif", save_all=True, append_images=frames[1:],
-    duration=DUR_MS, loop=0, optimize=False)
-
-print(f"GIF generated: output.gif ({len(frames)} frames)")
-print(f"Duration per frame: {DUR_MS}ms")
-print(f"Total duration: ~{len(frames) * DUR_MS / 1000:.1f}s")
+print(f"\nGIF ready: {OUTPUT_GIF}")
+print(f"![Terminal GIF](./{OUTPUT_GIF})")
