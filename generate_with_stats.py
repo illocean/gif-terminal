@@ -18,7 +18,7 @@ USERNAME = (
 W = 720
 H = 480
 FS = 14
-LH = 20
+LH = 22
 MG = 20
 
 frames = []
@@ -60,6 +60,10 @@ class Frame:
     def end(self):
         frames.append(self.img)
 
+def hold(n=8):
+    for _ in range(n):
+        frames.append(frames[-1])
+
 stats = {}
 try:
     r = requests.get(f"https://api.github.com/users/{USERNAME}", timeout=10)
@@ -79,36 +83,85 @@ try:
 except:
     pass
 
-for _ in range(4):
-    f = Frame()
-    f.fig("PANDADOR")
-    f.l("  DIT Student @ PUP Taguig", c=(100, 100, 120))
-    f.end()
+# ============ BOOT SEQUENCE (line by line, visible) ============
+f = Frame()
+f.fig("PANDADOR")
+f.l("  DIT Student @ PUP Taguig", c=(100, 100, 120))
+f.end()
+hold(10)
 
 f = Frame()
 f.fig("PANDADOR")
-f.l("  >> SYSTEM READY", c=(0, 200, 0))
-f.l("     Loading modules...... OK", c=(80, 180, 80))
-f.l("     Connecting to GitHub... OK", c=(80, 180, 80))
-f.l("     Profile loaded.", c=(80, 180, 80))
+f.l("", c=(50, 50, 50))
+f.l("  >> Booting system...", c=(0, 200, 0))
 f.end()
+hold(8)
 
-for n in range(5):
+f = Frame()
+f.fig("PANDADOR")
+f.l("", c=(50, 50, 50))
+f.l("  >> Booting system... [OK]", c=(0, 200, 0))
+f.l("  >> Loading kernel modules...", c=(0, 200, 0))
+f.end()
+hold(8)
+
+f = Frame()
+f.fig("PANDADOR")
+f.l("", c=(50, 50, 50))
+f.l("  >> Booting system... [OK]", c=(0, 200, 0))
+f.l("  >> Loading kernel modules... [OK]", c=(0, 200, 0))
+f.l("  >> Initializing display...", c=(0, 200, 0))
+f.end()
+hold(8)
+
+f = Frame()
+f.fig("PANDADOR")
+f.l("", c=(50, 50, 50))
+f.l("  >> Booting system... [OK]", c=(0, 200, 0))
+f.l("  >> Loading kernel modules... [OK]", c=(0, 200, 0))
+f.l("  >> Initializing display... [OK]", c=(0, 200, 0))
+f.l("  >> Fetching GitHub data...", c=(0, 200, 0))
+f.end()
+hold(8)
+
+f = Frame()
+f.fig("PANDADOR")
+f.l("", c=(50, 50, 50))
+f.l("  >> Booting system... [OK]", c=(0, 200, 0))
+f.l("  >> Loading kernel modules... [OK]", c=(0, 200, 0))
+f.l("  >> Initializing display... [OK]", c=(0, 200, 0))
+f.l("  >> Fetching GitHub data... [OK]", c=(0, 200, 0))
+f.l("  >> Profile loaded. Ready.", c=(0, 200, 0))
+f.end()
+hold(15)
+
+# ============ PROFILE (line by line typing) ============
+items = [
+    ("name     ", "Kim Phillip G. Andador",    (255, 255, 255)),
+    ("handle   ", USERNAME,                   (0, 200, 255)),
+    ("school   ", "PUP Taguig - DIT (2nd)",   (255, 255, 255)),
+    ("location ", "Paranaque City, PH",        (255, 255, 255)),
+    ("email    ", "andadorkimphillip@gmail.com", (0, 200, 255)),
+    ("github   ", f"github.com/{USERNAME}",   (0, 200, 255)),
+]
+
+f = Frame()
+f.l("  $ cat profile.txt", c=(0, 200, 0))
+f.g()
+f.end()
+hold(6)
+
+for n in range(len(items)):
     f = Frame()
     f.l("  $ cat profile.txt", c=(0, 200, 0))
     f.g()
-    items = [
-        ("name     ", "Kim Phillip G. Andador",    (255, 255, 255)),
-        ("handle   ", USERNAME,                   (0, 200, 255)),
-        ("school   ", "PUP Taguig - DIT (2nd)",   (255, 255, 255)),
-        ("location ", "Paranaque City, PH",        (255, 255, 255)),
-        ("email    ", "andadorkimphillip@gmail.com", (0, 200, 255)),
-        ("github   ", f"github.com/{USERNAME}",   (0, 200, 255)),
-    ]
     for j, (k, v, vc) in enumerate(items):
         if j <= n:
             f.kv(f"  {k}", v, vc)
+        else:
+            f.l("")
     f.end()
+    hold(5)
 
 f = Frame()
 f.l("  $ cat profile.txt", c=(0, 200, 0))
@@ -118,39 +171,79 @@ for k, v, vc in items:
 f.g()
 f.l("  Building software, solving problems, learning daily.", c=(120, 120, 120))
 f.end()
+hold(15)
 
-for _ in range(4):
-    frames.append(frames[-1])
+# ============ SKILLS (line by line typing) ============
+skills = [
+    ("Languages", "C, C++, C#, Java, JavaScript, TypeScript, COBOL, VB.NET"),
+    ("Web      ", "PHP, Laravel, HTML, CSS"),
+    ("Database ", "PostgreSQL, MySQL, SQLite"),
+    ("Tools    ", "Git, VS Code, Visual Studio, .NET, Node.js"),
+    ("Platforms", "Windows, Linux"),
+]
 
-for n in range(5):
+f = Frame()
+f.l("  $ cat skills.txt", c=(0, 200, 0))
+f.g()
+f.end()
+hold(6)
+
+for n in range(len(skills)):
     f = Frame()
     f.l("  $ cat skills.txt", c=(0, 200, 0))
     f.g()
-    skills = [
-        ("Languages", "C, C++, C#, Java, JavaScript, TypeScript, COBOL, VB.NET"),
-        ("Web      ", "PHP, Laravel, HTML, CSS"),
-        ("Database ", "PostgreSQL, MySQL, SQLite"),
-        ("Tools    ", "Git, VS Code, Visual Studio, .NET, Node.js"),
-        ("Platforms", "Windows, Linux"),
-    ]
     for j, (k, v) in enumerate(skills):
         if j <= n:
             f.kv(f"  {k}", v, (255, 255, 255))
+        else:
+            f.l("")
     f.end()
+    hold(4)
 
-for _ in range(4):
-    frames.append(frames[-1])
+hold(8)
 
+# ============ LIVE LANGUAGES ============
 if stats.get("langs"):
     f = Frame()
     f.l("  $ cat skills.txt", c=(0, 200, 0))
     f.g()
-    f.l("  Active Languages:", c=(255, 200, 0))
-    for lang in stats["langs"]:
-        f.l(f"    - {lang}", c=(0, 200, 255))
+    f.l("  Active Languages (from repos):", c=(255, 200, 0))
     f.end()
-    for _ in range(4):
-        frames.append(frames[-1])
+    hold(6)
+    for lang in stats["langs"]:
+        f = Frame()
+        f.l("  $ cat skills.txt", c=(0, 200, 0))
+        f.g()
+        f.l("  Active Languages (from repos):", c=(255, 200, 0))
+        idx = stats["langs"].index(lang)
+        for i, l2 in enumerate(stats["langs"]):
+            if i <= idx:
+                f.l(f"    - {l2}", c=(0, 200, 255))
+        f.end()
+        hold(5)
+    hold(10)
+
+# ============ CONTACT ============
+f = Frame()
+f.fig("CONTACT", c=(0, 200, 255))
+f.g()
+f.end()
+hold(8)
+
+f = Frame()
+f.fig("CONTACT", c=(0, 200, 255))
+f.g()
+f.kv("  GitHub   ", f"https://github.com/{USERNAME}", (0, 200, 255))
+f.end()
+hold(5)
+
+f = Frame()
+f.fig("CONTACT", c=(0, 200, 255))
+f.g()
+f.kv("  GitHub   ", f"https://github.com/{USERNAME}", (0, 200, 255))
+f.kv("  Email    ", "andadorkimphillip@gmail.com", (0, 200, 255))
+f.end()
+hold(5)
 
 f = Frame()
 f.fig("CONTACT", c=(0, 200, 255))
@@ -158,18 +251,29 @@ f.g()
 f.kv("  GitHub   ", f"https://github.com/{USERNAME}", (0, 200, 255))
 f.kv("  Email    ", "andadorkimphillip@gmail.com", (0, 200, 255))
 f.kv("  Location ", "Paranaque City, Philippines", (255, 255, 255))
-f.g()
+f.end()
+hold(5)
+
 dt = datetime.utcnow().strftime("%Y-%m-%d %H:%M UTC")
+f = Frame()
+f.fig("CONTACT", c=(0, 200, 255))
+f.g()
+f.kv("  GitHub   ", f"https://github.com/{USERNAME}", (0, 200, 255))
+f.kv("  Email    ", "andadorkimphillip@gmail.com", (0, 200, 255))
+f.kv("  Location ", "Paranaque City, Philippines", (255, 255, 255))
+f.g()
 f.l(f"  Last updated: {dt}", c=(80, 80, 80))
 f.g()
 f.l("  Thank you for visiting!", c=(0, 200, 100))
 f.l("  Have a great day!", c=(0, 200, 100))
 f.end()
+hold(20)
 
-for _ in range(10):
-    frames.append(frames[-1])
-
+# ============ EXPORT GIF ============
+DUR_MS = 180
 frames[0].save("output.gif", save_all=True, append_images=frames[1:],
-    duration=100, loop=0, optimize=False)
+    duration=DUR_MS, loop=0, optimize=False)
 
 print(f"GIF generated: output.gif ({len(frames)} frames)")
+print(f"Duration per frame: {DUR_MS}ms")
+print(f"Total duration: ~{len(frames) * DUR_MS / 1000:.1f}s")
