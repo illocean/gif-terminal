@@ -37,7 +37,7 @@ GIT_TOKEN = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN") or ""
 HDR = {"Authorization": f"Bearer {GIT_TOKEN}", "Accept": "application/vnd.github+json"} if GIT_TOKEN else {}
 HDR2 = {"Accept": "application/vnd.github+json"}
 
-STATS = {"name": "Kim Phillip G. Andador", "repos": 0, "commits": 0, "stars": 0, "prs": 0, "issues": 0, "followers": 0, "langs": []}
+STATS = {"name": "", "repos": 0, "commits": 0, "stars": 0, "prs": 0, "issues": 0, "followers": 0, "langs": []}
 try:
     u = requests.get(f"https://api.github.com/users/{USERNAME}", headers=HDR, timeout=10).json()
     STATS["name"] = u.get("name") or USERNAME
@@ -45,8 +45,6 @@ try:
     STATS["followers"] = u.get("followers", 0)
 
     repos = requests.get(f"https://api.github.com/users/{USERNAME}/repos?per_page=100&sort=updated", headers=HDR2, timeout=15).json() or []
-    STATS["repos"] = len(repos)
-
     lc = {}
     for r in repos:
         l = r.get("language")
@@ -55,19 +53,19 @@ try:
         STATS["issues"] += r.get("open_issues_count", 0)
     STATS["langs"] = [l for l,_ in sorted(lc.items(), key=lambda x: -x[1])[:4]]
 
-    ev = requests.get(f"https://api.github.com/users/{USERNAME}/events?per_page=100", headers=HDR2, timeout=10)
-    if ev.ok:
-        push = [e for e in ev.json() if e.get("type") == "PushEvent"]
-        STATS["commits"] = sum(len(e.get("payload", {}).get("commits", [])) for e in push)
+    cq = f"author:{USERNAME}"
+    cs = requests.get(f"https://api.github.com/search/commits?q={cq}&per_page=1&sort=author-date&order=desc", headers=HDR2, timeout=10).json()
+    if "total_count" in cs:
+        STATS["commits"] = cs["total_count"]
 
-    q = f"is:pr author:{USERNAME} is:merged"
-    prs = requests.get(f"https://api.github.com/search/issues?q={q}&per_page=1", headers=HDR2, timeout=10).json()
-    STATS["prs"] = prs.get("total_count", 0)
+    pq = f"is:pr author:{USERNAME} is:merged"
+    pr = requests.get(f"https://api.github.com/search/issues?q={pq}&per_page=1", headers=HDR2, timeout=10).json()
+    STATS["prs"] = pr.get("total_count", 0)
 
-    print(f"Stats: {STATS['name']}, {STATS['repos']} repos, {STATS['commits']} commits, {STATS['stars']} stars, {STATS['prs']} PRs, {STATS['issues']} issues, {STATS['followers']} followers")
+    print(f"Stats: name='{STATS['name']}' repos={STATS['repos']} commits={STATS['commits']} stars={STATS['stars']} prs={STATS['prs']} issues={STATS['issues']} followers={STATS['followers']} langs={STATS['langs']}")
     has_stats = True
 except Exception as e:
-    print(f"Stats fetch error: {e}")
+    print(f"Stats fetch error: {e}, repos count: {STATS['repos']}")
     has_stats = False
 
 def _blend(b, o):
@@ -164,7 +162,7 @@ if has_stats:
     sl = [
         f"\x1b[93mName:\x1b[0m      {STATS['name']}",
         f"\x1b[93mRepos:\x1b[0m     {STATS['repos']}",
-        f"\x1b[93mCommits:\x1b[0m   {STATS['commits']} (recent)",
+        f"\x1b[93mCommits:\x1b[0m   {STATS['commits']}",
         f"\x1b[93mStars:\x1b[0m     {STATS['stars']}",
         f"\x1b[93mPRs:\x1b[0m       {STATS['prs']}",
         f"\x1b[93mIssues:\x1b[0m    {STATS['issues']}",
@@ -201,14 +199,16 @@ t.gen_text("", row_num=2)
 t.gen_text("\x1b[96m--- Tech Stack ---\x1b[0m", row_num=3)
 t.clone_frame(3)
 
-for i, (lb, vl) in enumerate([
-    ("\x1b[94mLanguages:\x1b[0m", " C, C++, C#, Java, JavaScript, TypeScript, PHP, COBOL"),
-    ("\x1b[94mWeb:\x1b[0m       ", " Laravel, HTML, CSS"),
-    ("\x1b[94mDatabase:\x1b[0m  ", " PostgreSQL, MySQL"),
-    ("\x1b[94mTools:\x1b[0m     ", " Git, VS Code, Visual Studio, .NET, Node.js"),
-    ("\x1b[94mPlatforms:\x1b[0m", " Windows, Linux"),
-]):
-    t.gen_text(f"{lb}{vl}", row_num=4+i)
+SKILL_LABELS = [
+    ("Languages", "C, C++, C#, Java, JavaScript, TypeScript, PHP, COBOL"),
+    ("Web",       "Laravel, HTML, CSS"),
+    ("Database",  "PostgreSQL, MySQL"),
+    ("Tools",     "Git, VS Code, Visual Studio, .NET, Node.js"),
+    ("Platforms", "Windows, Linux"),
+]
+for i, (lb, vl) in enumerate(SKILL_LABELS):
+    sp = " " * max(1, 12 - len(lb))
+    t.gen_text(f"\x1b[94m{lb}:{sp}\x1b[0m {vl}", row_num=4+i)
     t.clone_frame(2)
 
 t.clone_frame(6)
