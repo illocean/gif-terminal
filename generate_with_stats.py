@@ -222,8 +222,8 @@ t.gen_text("\x1b[92mThanks for visiting!\x1b[0m", row_num=fr+1)
 t.clone_frame(50)
 
 base_canvas, chrome = prepare_layers()
-t.gen_gif(save_frames=True)
 post_process(base_canvas, chrome)
+t.gen_gif()
 
 _SIZE_HINTS = [
     (180,24,24),(239,41,41),(78,170,37),(138,226,52),(196,160,0),(252,233,79),
@@ -231,20 +231,21 @@ _SIZE_HINTS = [
     (211,215,207),(238,238,236),(242,242,242),(55,55,60),(180,180,190),(160,160,170),
 ]
 
-print("Assembling GIF with PIL...")
-files = sorted(glob.glob(f"{FRAMES_DIR}/{FRAME_BASE}*.png"),
-    key=lambda x: int(os.path.splitext(os.path.basename(x))[0].split("_")[1]))
-n = len(_SIZE_HINTS)
-hint = Image.new("RGB", (n, 8))
-for i, c in enumerate(_SIZE_HINTS):
-    for y in range(8): hint.putpixel((i, y), c)
-first = Image.open(files[0]).convert("RGB")
-hinted = first.copy()
-hinted.paste(hint, (0, 0))
-pal = hinted.quantize(colors=250, method=Image.Quantize.FASTOCTREE, dither=0)
-fq = []
-for f in files:
-    fq.append(Image.open(f).convert("RGB").quantize(palette=pal, dither=1))
-dms = max(1, round(1000 / GIFOS_FPS))
-fq[0].save(OUTPUT_GIF, save_all=True, append_images=fq[1:], loop=0, duration=dms, optimize=False)
-print(f"GIF saved: {OUTPUT_GIF} ({len(files)} frames)")
+if not os.path.exists(OUTPUT_GIF):
+    print("Assembling GIF with PIL...")
+    files = sorted(glob.glob(f"{FRAMES_DIR}/{FRAME_BASE}*.png"),
+        key=lambda x: int(os.path.splitext(os.path.basename(x))[0].split("_")[1]))
+    n = len(_SIZE_HINTS)
+    hint = Image.new("RGB", (n, 8))
+    for i, c in enumerate(_SIZE_HINTS):
+        for y in range(8): hint.putpixel((i, y), c)
+    first = Image.open(files[0]).convert("RGB")
+    hinted = first.copy()
+    hinted.paste(hint, (0, 0))
+    pal = hinted.quantize(colors=250, method=Image.Quantize.FASTOCTREE, dither=0)
+    fq = []
+    for f in files:
+        fq.append(Image.open(f).convert("RGB").quantize(palette=pal, dither=1))
+    dms = max(1, round(1000 / GIFOS_FPS))
+    fq[0].save(OUTPUT_GIF, save_all=True, append_images=fq[1:], loop=0, duration=dms, optimize=False)
+    print(f"GIF saved: {OUTPUT_GIF} ({len(files)} frames)")
