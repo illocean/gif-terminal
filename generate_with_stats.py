@@ -21,104 +21,257 @@ except Exception as e:
     has_stats = False
     github_stats = None
 
-t = gifos.Terminal(width=700, height=450, xpad=10, ypad=10)
+R = "\x1b[91m"
+G = "\x1b[32m"
+Y = "\x1b[93m"
+B = "\x1b[34m"
+C = "\x1b[36m"
+M = "\x1b[35m"
+W = "\x1b[97m"
+GR = "\x1b[90m"
+XX = "\x1b[0m"
 
-t.set_prompt(f"\x1b[92m{USERNAME}\x1b[0m@\x1b[96mprofile\x1b[0m $ ")
-t.gen_text("\x1b[36m", row_num=1)
-t.gen_text("  .------------------------------------------------------------.  ", row_num=1)
-t.gen_text("  |   ___  ___  ___ _  _ ___ _   _ ___ ___   ___ ___ ___      |  ", row_num=2)
-t.gen_text("  |  | _ \\/ _ \\| _ \\\\| |_ _| \\| |_ _/ __| | __|_ _/ _ \\     |  ", row_num=3)
-t.gen_text("  |  |  _/ (_) |  _/ .` || || .` || | \\__ \\ | _| | | (_) |    |  ", row_num=4)
-t.gen_text("  |  |_|  \\___/|_| |_|\\_|___|_|\\_|___||___/ |_| |___\\___/     |  ", row_num=5)
-t.gen_text("  '------------------------------------------------------------'  ", row_num=6)
-t.gen_text("\x1b[0m", row_num=7)
-t.clone_frame(30)
+def section_line(row_num, t_instance):
+    t_instance.gen_text(f"  {GR}{'='*56}{XX}", row_num=row_num)
 
-t.gen_text("\x1b[32m  SYSTEM BOOT\x1b[0m", row_num=8)
-t.clone_frame(3)
-t.gen_text("  +-- \x1b[90mInitializing kernel...\x1b[0m \x1b[32mOK\x1b[0m", row_num=9)
-t.clone_frame(3)
-t.gen_text("  +-- \x1b[90mLoading profile modules...\x1b[0m \x1b[32mOK\x1b[0m", row_num=10)
-t.clone_frame(3)
-t.gen_text("  +-- \x1b[90mFetching GitHub data...\x1b[0m \x1b[32mOK\x1b[0m", row_num=11)
-t.clone_frame(3)
-t.gen_text("  +-- \x1b[90mGenerating visualization...\x1b[0m \x1b[32mOK\x1b[0m", row_num=12)
-t.clone_frame(15)
+t = gifos.Terminal(width=720, height=480, xpad=10, ypad=10)
 
-t.gen_text("\x1b[35m  PROFILE\x1b[0m", row_num=14)
-t.clone_frame(3)
+t.set_prompt(f"{G}{USERNAME}{XX}@{C}profile{XX} $ ")
 
-if has_stats and github_stats.languages_sorted:
-    top_langs = github_stats.languages_sorted[:3]
-    langs_str = ", ".join([f"\x1b[93m{lang[0]}\x1b[97m" for lang in top_langs])
-else:
-    langs_str = "\x1b[90m---\x1b[97m"
+# ============ SCREEN 1: BOOT SEQUENCE ============
+t.gen_text(f"{C}", row_num=1)
+t.gen_text(f"  {'='*56}  ", row_num=1)
+t.gen_text(f"  |  ____  _   _ ____  _        _    __     __  |  ", row_num=2)
+t.gen_text(f"  | |  _ \\| \\ | |  _ \\| |      / \\   \\ \\   / /  |  ", row_num=3)
+t.gen_text(f"  | | |_) |  \\| | | | | |     / _ \\   \\ \\ / /   |  ", row_num=4)
+t.gen_text(f"  | |  __/| |\\  | |_| | |___ / ___ \\   \\ V /    |  ", row_num=5)
+t.gen_text(f"  | |_|   |_| \\_|____/|_____/_/   \\_\\   \\_/     |  ", row_num=6)
+t.gen_text(f"  |                                                 |  ", row_num=7)
+t.gen_text(f"  |  {Y}JR Software Engineer & DIT Student{XX}           |  ", row_num=8)
+t.gen_text(f"  |  {GR}Polytechnic University of the Philippines{XX}    |  ", row_num=9)
+t.gen_text(f"  {'='*56}  ", row_num=10)
+t.gen_text(f"{XX}", row_num=11)
+t.clone_frame(40)
 
-commits_str = str(github_stats.total_commits_last_year) + " (last year)" if has_stats and github_stats.total_commits_last_year else "\x1b[90m---\x1b[97m"
-
-profile_lines = [
-    f"  \x1b[33mName\x1b[90m:\x1b[97m      Kim Phillip G. Andador",
-    f"  \x1b[33mHandle\x1b[90m:\x1b[97m    {USERNAME}",
-    f"  \x1b[33mRole\x1b[90m:\x1b[97m      JR Software Engineer",
-    f"  \x1b[33mLocation\x1b[90m:\x1b[97m  Paranaque City, PH",
-    f"  \x1b[33mCommits\x1b[90m:\x1b[97m   {commits_str}",
-    f"  \x1b[33mStack\x1b[90m:\x1b[97m     {langs_str}",
-]
-
-for i, line in enumerate(profile_lines):
-    t.gen_text(line, row_num=15 + i)
-    t.clone_frame(2)
-
+section_line(12, t)
+t.gen_text(f"  {G}SYSTEM INIT{XX}", row_num=13)
+t.clone_frame(2)
+t.gen_text(f"  {GR}{'>>'}{XX} Loading kernel modules......{G}DONE{XX}", row_num=14)
+t.clone_frame(2)
+t.gen_text(f"  {GR}{'>>'}{XX} Initializing terminal........{G}DONE{XX}", row_num=15)
+t.clone_frame(2)
+t.gen_text(f"  {GR}{'>>'}{XX} Connecting to GitHub API......{G}DONE{XX}", row_num=16)
+t.clone_frame(2)
+t.gen_text(f"  {GR}{'>>'}{XX} Fetching profile data.........{G}DONE{XX}", row_num=17)
+t.clone_frame(2)
+t.gen_text(f"  {GR}{'>>'}{XX} Rendering visualization.......{G}DONE{XX}", row_num=18)
 t.clone_frame(10)
 
-t.clear_frame()
-
-t.gen_text("\x1b[35m  ------- TECHNOLOGIES -------\x1b[0m", row_num=1)
+# ============ SCREEN 2: SYSTEM INFO (neofetch style) ============
+section_line(20, t)
+t.gen_text(f"  {M}SYSTEM INFORMATION{XX}", row_num=21)
+section_line(22, t)
 t.clone_frame(5)
 
-skills_data = [
-    ("\x1b[33mLanguages\x1b[90m:\x1b[97m", "  C, C++, C#, Java, JavaScript, TypeScript"),
-    ("\x1b[33mWeb\x1b[90m:\x1b[97m", "       PHP, Laravel, HTML, CSS"),
-    ("\x1b[33mDatabase\x1b[90m:\x1b[97m", "   PostgreSQL, MySQL, SQL"),
-    ("\x1b[33mTools\x1b[90m:\x1b[97m", "     Git, VS Code, Visual Studio, .NET, Node.js"),
-    ("\x1b[33mPlatforms\x1b[90m:\x1b[97m", "  Windows"),
-    ("\x1b[33mAlso\x1b[90m:\x1b[97m", "      COBOL, VB.NET, Tcl, Technical Support"),
+sysinfo = [
+    f"  {GR}OS{XX}          {W}GitHub Profile v1.0{XX}",
+    f"  {GR}User{XX}        {C}{USERNAME}{XX}",
+    f"  {GR}Host{XX}        {W}Kim Phillip G. Andador{XX}",
+    f"  {GR}Role{XX}        {Y}JR Software Engineer{XX}",
+    f"  {GR}Education{XX}   {W}DIT @ PUP Taguig{XX}",
+    f"  {GR}Location{XX}    {W}Paranaque City, Philippines{XX}",
+    f"  {GR}Shell{XX}       {W}/bin/zsh{XX}",
 ]
 
-for i, (label, value) in enumerate(skills_data):
-    t.gen_text(f"  {label}{value}", row_num=2 + i)
+for i, line in enumerate(sysinfo):
+    t.gen_text(line, row_num=23 + i)
     t.clone_frame(2)
+
+t.clone_frame(15)
+
+# ============ SCREEN 3: GITHUB STATS ============
+t.clear_frame()
+
+t.gen_text(f"{C}", row_num=1)
+t.gen_text(f"  {'='*56}  ", row_num=1)
+t.gen_text(f"  |  {W} __ _  _  __ _  _ __   ___ __ _(_)_(_)___ __ _{XX}  |  ", row_num=2)
+t.gen_text(f"  |  {W} / _`| || / _` || '_ \\ / __/ _` | | __/ _ \\ '_ \\{XX}  |  ", row_num=3)
+t.gen_text(f"  |  {W}| (_| \\ V / (_| | | | | (_| (_| | | ||  __/ | | |{XX}  |  ", row_num=4)
+t.gen_text(f"  |  {W} \\__, |\\_/ \\__, |_| |_|\\___\\__,_|_|\\__\\___|_| |_|{XX}  |  ", row_num=5)
+t.gen_text(f"  |  {W} |___/     |___/                                 {XX}  |  ", row_num=6)
+t.gen_text(f"  {'='*56}  ", row_num=7)
+t.gen_text(f"{XX}", row_num=8)
+t.clone_frame(10)
+
+section_line(9, t)
+t.gen_text(f"  {M}GITHUB STATISTICS{XX}", row_num=10)
+section_line(11, t)
+t.clone_frame(5)
+
+commits_count = github_stats.total_commits_last_year if has_stats and github_stats.total_commits_last_year else 0
+stars_count = github_stats.total_stargazers if has_stats and github_stats.total_stargazers else 0
+prs_count = github_stats.total_pull_requests_made if has_stats and github_stats.total_pull_requests_made else 0
+issues_count = github_stats.total_issues if has_stats and github_stats.total_issues else 0
+repos_count = github_stats.total_repo_contributions if has_stats and github_stats.total_repo_contributions else 0
+followers_count = github_stats.total_followers if has_stats and github_stats.total_followers else 0
+
+stats_display = [
+    f"  {Y}Commits (1yr){GR}:{XX}  {W}{commits_count}{XX}",
+    f"  {Y}Repositories{GR}:{XX}   {W}{repos_count}{XX}",
+    f"  {Y}Pull Requests{GR}:{XX}  {W}{prs_count}{XX}",
+    f"  {Y}Issues{GR}:{XX}         {W}{issues_count}{XX}",
+    f"  {Y}Stars Earned{GR}:{XX}   {W}{stars_count}{XX}",
+    f"  {Y}Followers{GR}:{XX}      {W}{followers_count}{XX}",
+]
+
+for i, line in enumerate(stats_display):
+    t.gen_text(line, row_num=12 + i)
+    t.clone_frame(2)
+
+t.clone_frame(8)
+
+if has_stats and github_stats.languages_sorted:
+    t.gen_text(f"  {GR}{'-'*56}{XX}", row_num=12 + len(stats_display))
+    t.gen_text(f"  {M}TOP LANGUAGES{XX}", row_num=13 + len(stats_display))
+    t.clone_frame(3)
+    top_langs = github_stats.languages_sorted[:6]
+    bar_max = 30
+    for idx, (lang, pct) in enumerate(top_langs):
+        bar_len = max(1, int((pct / 100.0) * bar_max))
+        bar = f"{G}{'#' * bar_len}{XX}"
+        t.gen_text(f"  {C}{lang:12s}{GR}:{XX} {bar} {W}{pct:.1f}%{XX}", row_num=14 + len(stats_display) + idx)
+        t.clone_frame(2)
+
+t.clone_frame(20)
+
+# ============ SCREEN 4: EXPERIENCE & EDUCATION ============
+t.clear_frame()
+
+t.gen_text(f"{C}", row_num=1)
+t.gen_text(f"  {'='*56}  ", row_num=1)
+t.gen_text(f"  |  {W} ___   ___   ___   ___   ___  ___   ___   _  |{XX}  |  ", row_num=2)
+t.gen_text(f"  |  {W}| _ \\ / _ \\ / __| | _ \\ | _ \\/ _ \\ / __| | | |{XX}  |  ", row_num=3)
+t.gen_text(f"  |  {W}|  _/| (_) | (__  |   / |  _/ (_) | (__  |_| |{XX}  |  ", row_num=4)
+t.gen_text(f"  |  {W}|_|   \\___/ \\___| |_|_\\ |_|  \\___/ \\___| (_) |{XX}  |  ", row_num=5)
+t.gen_text(f"  {'='*56}  ", row_num=6)
+t.gen_text(f"{XX}", row_num=7)
+t.clone_frame(10)
+
+section_line(8, t)
+t.gen_text(f"  {M}JOURNEY{XX}", row_num=9)
+section_line(10, t)
+t.clone_frame(5)
+
+timeline = [
+    f"  {Y}2026{GR}:{XX}  {W}2nd Year{GR} -{XX} {C}DIT @ PUP Taguig{XX}",
+    f"  {Y}2024{GR}:{XX}  {W}ICT Graduate{GR} -{XX} {C}Moreh Academy{XX}",
+    f"  {Y}2023{GR}:{XX}  {W}IT Intern{GR} -{XX} {C}Moreh Academy IT Dept{XX}",
+    f"  {Y}2024{GR}:{XX}  {W}PUPCET Qualifier{GR} -{XX} {C}PUP Admissions Test{XX}",
+]
+
+for i, line in enumerate(timeline):
+    t.gen_text(line, row_num=11 + i)
+    t.clone_frame(3)
 
 t.clone_frame(10)
 
-t.clear_frame()
-
-t.gen_text("\x1b[36m", row_num=1)
-t.gen_text("  .----------------------------------------------------------.  ", row_num=1)
-t.gen_text("  |  ___ _   _ ___ ___ ___ ___ ___   ___ __  __   _   _ __ |  ", row_num=2)
-t.gen_text("  | |_ _| \\| / __|_ _/ __| __/ _ \\ / _ \\\\ \\/ /  /_\\ | _ \\|  |  ", row_num=3)
-t.gen_text("  |  | || .\` \\__ \\| | (__| _| (_) | (_) |>  <  / _ \\|   /|  |  ", row_num=4)
-t.gen_text("  | |___|_|\\_\\___/___\\___|___\\___/ \\___/_/\\_\\ /_/ \\_\\_|_\\|  |  ", row_num=5)
-t.gen_text("  '----------------------------------------------------------'  ", row_num=6)
-t.gen_text("\x1b[0m", row_num=7)
+section_line(16, t)
+t.gen_text(f"  {M}ACHIEVEMENTS{XX}", row_num=17)
+section_line(18, t)
 t.clone_frame(3)
 
-t.gen_text(f"  \x1b[90mProfile\x1b[0m  \x1b[90m:\x1b[0m  \x1b[96mhttps://github.com/{USERNAME}\x1b[0m", row_num=7)
-t.clone_frame(2)
-t.gen_text(f"  \x1b[90mEmail\x1b[0m   \x1b[90m:\x1b[0m  \x1b[96mandadorkimphillip@gmail.com\x1b[0m", row_num=8)
-t.clone_frame(2)
-t.gen_text(f"  \x1b[90mUpdated\x1b[0m \x1b[90m:\x1b[0m  \x1b[97m{datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')}\x1b[0m", row_num=9)
-t.clone_frame(2)
+achievements = [
+    f"  {GR}*{XX} {W}Developed campus ledger system with Laravel & PostgreSQL{XX}",
+    f"  {GR}*{XX} {W}Built COBOL inventory management with indexed file handling{XX}",
+    f"  {GR}*{XX} {W}Created PowerPoint VSTO add-in for font/color cleanup (C#){XX}",
+    f"  {GR}*{XX} {W}Developed scientific calculator with Java Swing + FlatLaf{XX}",
+    f"  {GR}*{XX} {W}Published Spicetify extensions (TypeScript, JavaScript){XX}",
+]
 
-t.gen_text("", row_num=10)
+for i, line in enumerate(achievements):
+    t.gen_text(line, row_num=19 + i)
+    t.clone_frame(2)
+
+t.clone_frame(15)
+
+# ============ SCREEN 5: TECH STACK ============
+t.clear_frame()
+
+t.gen_text(f"{C}", row_num=1)
+t.gen_text(f"  {'='*56}  ", row_num=1)
+t.gen_text(f"  |  {W} _____  ___ ___  ___   _     ___  ___  ___{XX}  |  ", row_num=2)
+t.gen_text(f"  |  {W}|_   _|/ __/ __|/ _ \\ | |   / _ \\| _ \\/ __|{XX}  |  ", row_num=3)
+t.gen_text(f"  |  {W}  | || (__\\__ \\ (_) || |__| (_) |   /\\__ \\{XX}  |  ", row_num=4)
+t.gen_text(f"  |  {W}  |_| \\___|___/\\___( )____|\\___/|_|_\\|___/{XX}  |  ", row_num=5)
+t.gen_text(f"  |  {W}                   |/                          {XX}  |  ", row_num=6)
+t.gen_text(f"  {'='*56}  ", row_num=7)
+t.gen_text(f"{XX}", row_num=8)
+t.clone_frame(10)
+
+section_line(9, t)
+t.gen_text(f"  {M}SKILLS & TECHNOLOGIES{XX}", row_num=10)
+section_line(11, t)
+t.clone_frame(5)
+
+tech_categories = [
+    (f"{Y}Languages{GR}:{XX}", "  C, C++, C#, Java, JavaScript, TypeScript, COBOL, VB.NET, Tcl"),
+    (f"{Y}Web{GR}:{XX}", "       PHP, Laravel, HTML, CSS"),
+    (f"{Y}Database{GR}:{XX}", "   PostgreSQL, MySQL, SQL"),
+    (f"{Y}Tools{GR}:{XX}", "     Git, VS Code, Visual Studio, .NET SDK, Node.js"),
+    (f"{Y}Frameworks{GR}:{XX}", "  Laravel, Windows Forms, .NET Framework"),
+    (f"{Y}Platforms{GR}:{XX}", "  Windows, Linux (WSL)"),
+    (f"{Y}Expertise{GR}:{XX}", "  Software Dev, Technical Support, Troubleshooting, IT Support"),
+]
+
+for i, (label, value) in enumerate(tech_categories):
+    t.gen_text(f"  {label}{value}", row_num=12 + i)
+    t.clone_frame(2)
+
+t.clone_frame(15)
+
+# ============ SCREEN 6: CONTACT / FOOTER ============
+t.clear_frame()
+
+t.gen_text(f"{C}", row_num=1)
+t.gen_text(f"  {'='*56}  ", row_num=1)
+t.gen_text(f"  |  {W}  ___ ___  _  _ _____ ___ ___ ___ ___  ___{XX}  |  ", row_num=2)
+t.gen_text(f"  |  {W} / __/ _ \\| \\| |_   _|_ _/ __| __/ _ \\|   \\{XX}  |  ", row_num=3)
+t.gen_text(f"  |  {W}| (_| (_) | .\` | | |  | | (__| _| (_) | |) |{XX}  |  ", row_num=4)
+t.gen_text(f"  |  {W} \\___\\___/|_|\\_| |_| |___\\___|___\\___/|___/{XX}  |  ", row_num=5)
+t.gen_text(f"  {'='*56}  ", row_num=6)
+t.gen_text(f"{XX}", row_num=7)
+t.clone_frame(15)
+
+section_line(8, t)
+t.gen_text(f"  {M}CONTACT{XX}", row_num=9)
+section_line(10, t)
+t.clone_frame(3)
+
+contact = [
+    f"  {GR}GitHub{XX}   {C}https://github.com/{USERNAME}{XX}",
+    f"  {GR}Email{XX}    {C}andadorkimphillip@gmail.com{XX}",
+    f"  {GR}Location{XX} {W}Paranaque City, NCR, Philippines{XX}",
+]
+
+for i, line in enumerate(contact):
+    t.gen_text(line, row_num=11 + i)
+    t.clone_frame(3)
+
+t.clone_frame(8)
+
+timestamp = datetime.utcnow().strftime('%Y-%m-%d %H:%M UTC')
+t.gen_text(f"  {GR}Last updated{XX}  {W}{timestamp}{XX}", row_num=15)
+t.clone_frame(5)
+
+t.gen_text(f"", row_num=17)
+t.gen_text(f"  {C}{'~'*56}{XX}", row_num=18)
 t.clone_frame(2)
-t.gen_text("  \x1b[92mThanks for stopping by!\x1b[0m", row_num=11)
-t.clone_frame(2)
-t.gen_text("  \x1b[92mHave a great day!\x1b[0m", row_num=12)
+t.gen_text(f"  {G}  Thanks for visiting my profile!{XX}", row_num=19)
+t.gen_text(f"  {G}  Have an amazing day!{XX}", row_num=20)
+t.gen_text(f"  {C}{'~'*56}{XX}", row_num=21)
 t.clone_frame(50)
 
 t.gen_gif()
 
 print("\nGIF generated: output.gif")
-print("\nTo use in your README.md:")
-print('![Terminal GIF](./output.gif)')
+print("Profile README is now live with the new terminal GIF!")
