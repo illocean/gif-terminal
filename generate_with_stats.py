@@ -3,29 +3,12 @@ from datetime import datetime
 import os
 import requests
 
-# ============================================
-# Terminal GIF with GitHub Stats
-# ============================================
-# 
-# REQUIREMENTS:
-# 1. Create a .env file in the project folder
-# 2. Add: GITHUB_TOKEN=your_token_here
-#
-# To create the token:
-# - Go to: https://github.com/settings/tokens
-# - Click "Generate new token (classic)"
-# - Select only: read:user
-# - Copy the token and add it to .env
-# ============================================
-
-# Auto-detected from GitHub Actions context; falls back to env var or default.
 USERNAME = (
     os.environ.get("GITHUB_REPOSITORY_OWNER")
     or os.environ.get("GIT_USERNAME")
-    or "dbuzatto"
+    or "pandadoor"
 )
 
-# Try to fetch GitHub statistics
 try:
     github_stats = gifos.utils.fetch_github_stats(user_name=USERNAME)
     has_stats = github_stats is not None
@@ -38,50 +21,38 @@ except Exception as e:
     has_stats = False
     github_stats = None
 
-# Terminal settings
 t = gifos.Terminal(width=700, height=450, xpad=10, ypad=10)
 
-# -- Initial prompt --
 t.set_prompt(f"\x1b[91m{USERNAME}\x1b[0m@\x1b[93mgithub\x1b[0m ~> ")
 
-# -- Boot sequence --
 t.gen_text("Initializing terminal...", row_num=1)
 t.clone_frame(5)
 t.gen_text("\x1b[32m[OK]\x1b[0m System ready", row_num=2)
 t.clone_frame(10)
 
-# -- Command to view stats --
 t.gen_prompt(row_num=3)
-t.gen_typing_text("github-stats --user " + USERNAME, row_num=3, contin=True, speed=1)
+t.gen_typing_text("cat profile.txt", row_num=3, contin=True, speed=1)
 t.clone_frame(5)
 
-# -- Display statistics --
 t.gen_text("", row_num=4)
-t.gen_text(f"\x1b[96m=== GitHub Stats for {USERNAME} ===\x1b[0m", row_num=5)
+t.gen_text(f"\x1b[96m=== {USERNAME} ===\x1b[0m", row_num=5)
 t.clone_frame(3)
 
 if has_stats:
+    account_name = github_stats.account_name or USERNAME
     stats_lines = [
-        f"\x1b[93mName:\x1b[0m        {github_stats.account_name or USERNAME}",
+        f"\x1b[93mName:\x1b[0m        Kim Phillip G. Andador",
+        f"\x1b[93mRole:\x1b[0m        JR Software Engineer",
         f"\x1b[93mCommits:\x1b[0m     {github_stats.total_commits_last_year} (last year)",
     ]
-
-    # Top languages
-    if github_stats.languages_sorted:
-        top_langs = github_stats.languages_sorted[:3]
-        langs_str = ", ".join([f"{lang[0]} ({lang[1]}%)" for lang in top_langs])
-        stats_lines.append(f"\x1b[93mTop Langs:\x1b[0m   {langs_str}")
-    
-    # Top languages
     if github_stats.languages_sorted:
         top_langs = github_stats.languages_sorted[:3]
         langs_str = ", ".join([f"{lang[0]} ({lang[1]}%)" for lang in top_langs])
         stats_lines.append(f"\x1b[93mTop Langs:\x1b[0m   {langs_str}")
 else:
-    # Example data
     stats_lines = [
-        f"\x1b[93mName:\x1b[0m        {USERNAME}",
-        "\x1b[93mCommits:\x1b[0m     -- (configure GITHUB_TOKEN)",
+        "\x1b[93mName:\x1b[0m        Kim Phillip G. Andador",
+        "\x1b[93mRole:\x1b[0m        JR Software Engineer",
     ]
 
 for i, line in enumerate(stats_lines):
@@ -92,7 +63,6 @@ t.clone_frame(10)
 t.gen_text("\x1b[96m================================\x1b[0m", row_num=6+len(stats_lines))
 t.clone_frame(15)
 
-# -- Clear and Skills --
 t.gen_prompt(row_num=7+len(stats_lines))
 t.gen_typing_text("clear", row_num=7+len(stats_lines), contin=True, speed=1)
 t.clone_frame(5)
@@ -103,15 +73,16 @@ t.gen_typing_text("cat skills.txt", row_num=1, contin=True, speed=1)
 t.clone_frame(5)
 
 t.gen_text("", row_num=2)
-t.gen_text("\x1b[96m=== Tech Stack ===\x1b[0m", row_num=3)
+t.gen_text("\x1b[96m=== Skills ===\x1b[0m", row_num=3)
 t.clone_frame(3)
 
 skills = [
-    ("\x1b[94mLanguages:\x1b[0m  ", "C++, C, Java, JavaScript, TypeScript"),
+    ("\x1b[94mLanguages:\x1b[0m  ", "C, C++, C#, Java, JavaScript, TypeScript"),
     ("\x1b[94mWeb:\x1b[0m        ", "PHP, Laravel, HTML, CSS"),
     ("\x1b[94mDatabase:\x1b[0m   ", "PostgreSQL, MySQL, SQL"),
     ("\x1b[94mTools:\x1b[0m      ", "Git, VS Code, Visual Studio"),
-    ("\x1b[94mOther:\x1b[0m      ", "C#, COBOL, VB.NET, Tcl"),
+    ("\x1b[94mPlatforms:\x1b[0m  ", "Windows, .NET, Node.js"),
+    ("\x1b[94mOther:\x1b[0m      ", "COBOL, VB.NET, Tcl, Technical Support"),
 ]
 
 for i, (label, value) in enumerate(skills):
@@ -119,18 +90,16 @@ for i, (label, value) in enumerate(skills):
     t.clone_frame(2)
 
 t.clone_frame(10)
-t.gen_text("\x1b[96m==================\x1b[0m", row_num=4+len(skills))
+t.gen_text("\x1b[96m================================\x1b[0m", row_num=4+len(skills))
 t.clone_frame(5)
 
-# -- Final message --
 final_row = 5 + len(skills)
 t.gen_prompt(row_num=final_row)
-t.gen_typing_text("echo 'Thanks for visiting my profile!'", row_num=final_row, contin=True, speed=1)
+t.gen_typing_text("echo 'Thanks for visiting!'", row_num=final_row, contin=True, speed=1)
 t.clone_frame(5)
-t.gen_text("\x1b[92mThanks for visiting my profile!\x1b[0m", row_num=final_row+1)
+t.gen_text("\x1b[92mThanks for visiting!\x1b[0m", row_num=final_row+1)
 t.clone_frame(40)
 
-# Generate the GIF
 t.gen_gif()
 
 print("\n GIF generated: output.gif")
