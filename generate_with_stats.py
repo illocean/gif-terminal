@@ -14,7 +14,7 @@ ConvertAnsiEscape.ANSI_ESCAPE_MAP_TXT_COLOR.update({
 USERNAME = (
     os.environ.get("GITHUB_REPOSITORY_OWNER")
     or os.environ.get("GIT_USERNAME")
-    or "pandadoor"
+    or "illocean"
 )
 
 GIF_W, GIF_H  = 740, 540
@@ -116,7 +116,7 @@ def prep():
     d.line([(WIN_X+8,WIN_Y+HEADER_H),(WIN_X+WIN_W-8,WIN_Y+HEADER_H)], fill=(120,120,140,20), width=1)
 
     tf = _f(11)
-    d.text((WIN_X+10, WIN_Y+(TITLE_H-11)//2), f"{USERNAME}@pandadoor: ~",
+    d.text((WIN_X+10, WIN_Y+(TITLE_H-11)//2), f"{USERNAME}@illocean: ~",
         fill=(160,160,175,230), font=tf)
 
     br, by = 7, WIN_Y + TITLE_H//2
