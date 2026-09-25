@@ -4,6 +4,7 @@ import glob
 from PIL import Image, ImageFilter, ImageDraw, ImageChops
 from gifos.utils.convert_ansi_escape import ConvertAnsiEscape
 from github_stats import StatsFetchError, fetch_github_stats
+from profile_content import profile_lines
 
 # Override with high-contrast colors for blue glass background.
 # Avoid cyan/blue tones — they blend with the wallpaper.
@@ -289,26 +290,17 @@ t.gen_text("", row_num=2)
 t.gen_text("\x1b[96m=== Tech Stack ===\x1b[0m", row_num=3)
 t.clone_frame(3)
 
-skills = [
-    ("\x1b[94mCloud:\x1b[0m       ", "AWS, GCP, OCI, Cloudflare"),
-    ("\x1b[94mDevOps:\x1b[0m      ", "Terraform, Kubernetes, Docker, Git"),
-    ("\x1b[94mCI/CD:\x1b[0m       ", "GitLab, GitHub Actions"),
-    ("\x1b[94mMonitoring:\x1b[0m  ", "Grafana, Prometheus, Jaeger, Loki"),
-    ("\x1b[94mTools:\x1b[0m       ", "Postman, RabbitMQ, MongoDB"),
-    ("\x1b[94mOS:\x1b[0m          ", "macOS, Debian"),
-    ("\x1b[94mLanguages:\x1b[0m   ", "Java, Python"),
-]
-
-for i, (label, value) in enumerate(skills):
-    t.gen_text(f"{label}{value}", row_num=4 + i)
+profile = profile_lines()
+for i, line in enumerate(profile):
+    t.gen_text(f"\x1b[94m{line}\x1b[0m", row_num=4 + i)
     t.clone_frame(2)
 
 t.clone_frame(10)
-t.gen_text("\x1b[96m==================\x1b[0m", row_num=4 + len(skills))
+t.gen_text("\x1b[96m==================\x1b[0m", row_num=4 + len(profile))
 t.clone_frame(5)
 
 # -- Final message --
-final_row = 5 + len(skills)
+final_row = 5 + len(profile)
 t.gen_prompt(row_num=final_row)
 t.gen_typing_text(
     "echo 'Thanks for visiting my profile!'", row_num=final_row, contin=True, speed=1

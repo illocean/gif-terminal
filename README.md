@@ -138,6 +138,7 @@ The output is saved as `output.gif`.
 ├── generate_liquid_glass.py      # macOS Liquid Glass theme
 ├── generate_debian.py            # Debian GNOME theme
 ├── generate_with_stats.py        # Classic dark theme
+├── profile_content.py            # Shared profile categories
 ├── github_stats.py               # Shared fail-closed GitHub stats adapter
 ├── assets/
 │   ├── macos_wallpaper.jpg       # Wallpaper for macOS theme
@@ -161,8 +162,8 @@ When running locally, you can override it with:
 GIT_USERNAME=your-username python generate_liquid_glass.py
 ```
 
-### Skills and content
-All three scripts use the shared `github_stats.py` adapter and have equivalent stats sections. Edit the generator you use for theme-specific layout or content.
+### Profile categories
+All three generators use the shared `github_stats.py` adapter and render the profile categories from `profile_content.py`. Edit that file to change the shared profile content; edit a generator only for theme-specific layout.
 
 ### Theme-specific settings
 

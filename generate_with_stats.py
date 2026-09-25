@@ -3,6 +3,7 @@ import os, glob
 from PIL import Image, ImageFilter, ImageDraw, ImageFont, ImageChops
 from gifos.utils.convert_ansi_escape import ConvertAnsiEscape
 from github_stats import StatsFetchError, fetch_github_stats
+from profile_content import profile_lines
 
 ConvertAnsiEscape.ANSI_ESCAPE_MAP_TXT_COLOR.update({
     "39": "#F2F2F2", "31": "#CC0000", "32": "#4EAA25",
@@ -180,20 +181,13 @@ t.gen_text("", row_num=2)
 t.gen_text("\x1b[96m--- Tech Stack ---\x1b[0m", row_num=3)
 t.clone_frame(2)
 
-SKILL_LABELS = [
-    ("Languages", "C, C++, C#, Java, JavaScript, TypeScript, PHP, COBOL"),
-    ("Web",       "Laravel, HTML, CSS"),
-    ("Database",  "PostgreSQL, MySQL"),
-    ("Tools",     "Git, VS Code, Visual Studio, .NET, Node.js"),
-    ("Platforms", "Windows, Linux"),
-]
-for i, (lb, vl) in enumerate(SKILL_LABELS):
-    sp = " " * max(1, 12 - len(lb))
-    t.gen_text(f"\x1b[94m{lb}:{sp}\x1b[0m {vl}", row_num=4+i)
+profile = profile_lines()
+for i, line in enumerate(profile):
+    t.gen_text(f"\x1b[94m{line}\x1b[0m", row_num=4+i)
     t.clone_frame(1)
 
 t.clone_frame(3)
-t.gen_text("\x1b[96m---\x1b[0m", row_num=4+5)
+t.gen_text("\x1b[96m---\x1b[0m", row_num=4+len(profile))
 t.clone_frame(5)
 
 base_c, ch = prep()
