@@ -64,6 +64,10 @@ CORNER_RADIUS    = 10
 # Default gifos background color (ANSI code 49 → #0c0e0f) — used as chroma key
 BG_COLOR_HEX = "#0c0e0f"
 BG_COLOR     = (12, 14, 15)
+FRAMES_DIR   = "./frames"
+FRAME_BASE   = "frame_"
+OUTPUT_GIF   = "output.gif"
+GIFOS_FPS    = 20
 
 
 # ============================================
@@ -232,6 +236,59 @@ def post_process_frames(base_canvas, chrome, frames_dir="./frames"):
     print(f"INFO: Liquid glass post-processing complete ({len(frame_files)} frames).")
 
 
+_PALETTE_HINTS = [
+    (255, 255, 255), (255, 51, 85), (0, 255, 136), (255, 229, 0),
+    (255, 149, 0), (255, 68, 221), (200, 28, 28), (240, 55, 55),
+    (50, 50, 56), (85, 85, 92), (150, 150, 162), (160, 160, 175),
+]
+
+
+def _output_is_valid(path=OUTPUT_GIF):
+    try:
+        with Image.open(path) as image:
+            return (
+                image.format == "GIF"
+                and getattr(image, "n_frames", 0) >= 2
+                and image.width >= 320
+                and image.height >= 200
+            )
+    except (OSError, ValueError):
+        return False
+
+
+def assemble_gif_with_pil(frames_dir=FRAMES_DIR, output=OUTPUT_GIF, fps=GIFOS_FPS):
+    """Assemble the generated PNG frames when FFmpeg cannot create a GIF."""
+    frame_files = sorted(
+        glob.glob(f"{frames_dir}/{FRAME_BASE}*.png"),
+        key=lambda path: int(os.path.splitext(os.path.basename(path))[0].split("_")[1]),
+    )
+    if not frame_files:
+        print("ERROR: No frames found for PIL assembly.")
+        return False
+
+    hint = Image.new("RGB", (len(_PALETTE_HINTS), 8))
+    for index, color in enumerate(_PALETTE_HINTS):
+        for y in range(8):
+            hint.putpixel((index, y), color)
+
+    first = Image.open(frame_files[0]).convert("RGB")
+    hinted = first.copy()
+    hinted.paste(hint, (0, 0))
+    palette = hinted.quantize(colors=250, method=Image.Quantize.FASTOCTREE, dither=0)
+    duration_ms = max(1, round(1000 / fps))
+    frames = [Image.open(path).convert("RGB").quantize(palette=palette, dither=1) for path in frame_files]
+    frames[0].save(
+        output,
+        save_all=True,
+        append_images=frames[1:],
+        loop=0,
+        duration=duration_ms,
+        optimize=False,
+    )
+    print(f"INFO: PIL fallback — {output} ({len(frames)} frames, {os.path.getsize(output) // 1024} KB)")
+    return True
+
+
 # ============================================
 # Terminal — content generation (gifos)
 # ============================================
@@ -292,7 +349,7 @@ t.clone_frame(3)
 
 profile = profile_lines()
 for i, line in enumerate(profile):
-    t.gen_text(f"\x1b[94m{line}\x1b[0m", row_num=4 + i)
+    t.gen_text(f"\x1b[97m{line}\x1b[0m", row_num=4 + i)
     t.clone_frame(2)
 
 t.clone_frame(10)
@@ -321,6 +378,12 @@ post_process_frames(base_canvas, chrome)
 # ============================================
 
 t.gen_gif()
+
+if not _output_is_valid():
+    if os.path.exists(OUTPUT_GIF):
+        os.remove(OUTPUT_GIF)
+    if not assemble_gif_with_pil():
+        raise SystemExit("GIF generation failed: FFmpeg output was invalid and no frames were available for Pillow fallback")
 
 print("\n GIF generated: output.gif")
 print("\nTo use in your README.md:")

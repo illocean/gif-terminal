@@ -91,7 +91,7 @@ brew install ffmpeg
 sudo apt install ffmpeg
 ```
 
-> **No ffmpeg?** The `default` and `debian` generators include a Pillow fallback. The macOS generator requires a working FFmpeg installation. GitHub Actions installs FFmpeg.
+> **No ffmpeg?** All three generators include a Pillow fallback. GitHub Actions installs FFmpeg, but local runs remain usable when the FFmpeg command is unavailable.
 
 ### Configure your GitHub Token and username
 
