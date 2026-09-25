@@ -2,7 +2,7 @@
 
 # Terminal GIF for GitHub Profile
 
-**An animated terminal GIF showcasing your GitHub stats — auto-generated daily.**
+**An animated terminal GIF showcasing your GitHub stats — best-effort scheduled generation, with a manual Actions fallback.**
 
 ![Terminal GIF](./output.gif)
 
@@ -16,11 +16,11 @@
 
 ## Features
 
-- Fetches **real-time GitHub stats** (commits, stars, PRs, followers, rank, languages)
+- Fetches **live GitHub stats** (repos, commits, stars, PRs, issues, followers, languages) only when the complete API read succeeds
 - **Three themes** — classic terminal, macOS Liquid Glass, or Debian GNOME
 - **Username auto-detected** — no code editing needed after forking
-- **Auto-regenerated daily** via GitHub Actions
-- Easy to set up: fork → configure two settings → done
+- **Best-effort scheduled regeneration** via GitHub Actions, with a manual Actions fallback
+- Easy to set up: fork → optionally choose a theme → run the workflow
 
 ---
 
@@ -40,17 +40,13 @@
 
 Click the **Fork** button at the top right of this page.
 
-### 2. Add your GitHub Token
+### 2. No token setup required
 
-Go to **Settings → Secrets and variables → Actions** and add a new **secret**:
+The workflow uses GitHub's automatic `GITHUB_TOKEN` to read public repository data and publish `output.gif`. Do not add `GH_TOKEN` or another repository secret.
 
-| Name | Value |
-|------|-------|
-| `GH_TOKEN` | Your GitHub Personal Access Token |
+> GitHub may disable scheduled workflows in inactive public forks. If that happens, enable Actions and run **Generate Terminal GIF** manually from the Actions tab.
 
-> Generate a token at [github.com/settings/tokens](https://github.com/settings/tokens) — only the `read:user` scope is needed.
-
-### 3. Choose your theme
+### 3. Choose your theme (optional)
 
 Go to **Settings → Secrets and variables → Actions**, open the **Variables** tab and click **New repository variable**:
 
@@ -71,7 +67,7 @@ Replace the file in `assets/` with your own image. Any resolution works — it w
 
 ### 5. Trigger the first run
 
-Go to **Actions → Generate Terminal GIF → Run workflow** to generate your first GIF immediately, or wait for the daily schedule (06:00 UTC).
+Go to **Actions → Generate Terminal GIF → Run workflow** to generate your first GIF immediately, or rely on the best-effort daily schedule (06:00 UTC). If the schedule is disabled, use the manual Actions fallback from the Actions tab.
 
 ### 6. Add to your profile README
 
@@ -86,7 +82,7 @@ Go to **Actions → Generate Terminal GIF → Run workflow** to generate your fi
 ### Install dependencies
 
 ```bash
-pip install github-readme-terminal requests python-dotenv Pillow
+python -m pip install --require-hashes --requirement requirements.txt
 
 # Install ffmpeg (macOS)
 brew install ffmpeg
@@ -95,7 +91,7 @@ brew install ffmpeg
 sudo apt install ffmpeg
 ```
 
-> **No ffmpeg?** The scripts include a PIL fallback — the GIF will still be generated.
+> **No ffmpeg?** The `default` and `debian` generators include a Pillow fallback. The macOS generator requires a working FFmpeg installation. GitHub Actions installs FFmpeg.
 
 ### Configure your GitHub Token and username
 
@@ -103,14 +99,20 @@ sudo apt install ffmpeg
 cp .env.example .env
 ```
 
-Edit `.env` and fill in both values:
+Edit `.env` and fill in a non-empty GitHub token with read access to public profile data. The generators fail rather than render incomplete or placeholder stats. `GIT_USERNAME` is optional when the script runs in GitHub Actions; local runs can use the detected owner fallback.
 
 ```env
 GITHUB_TOKEN=your_token_here
 GIT_USERNAME=your_github_username   # required for local runs
 ```
 
-> On GitHub Actions the username is auto-detected — `GIT_USERNAME` is only needed when running locally.
+> On GitHub Actions, `GITHUB_TOKEN` is supplied automatically and the username is auto-detected. Both environment values are only needed for local runs.
+
+After generating locally, run the same validation used by CI:
+
+```bash
+python scripts/validate_gif.py output.gif
+```
 
 ### Generate the GIF
 
@@ -136,9 +138,11 @@ The output is saved as `output.gif`.
 ├── generate_liquid_glass.py      # macOS Liquid Glass theme
 ├── generate_debian.py            # Debian GNOME theme
 ├── generate_with_stats.py        # Classic dark theme
+├── github_stats.py               # Shared fail-closed GitHub stats adapter
 ├── assets/
 │   ├── macos_wallpaper.jpg       # Wallpaper for macOS theme
 │   └── debian_wallpaper.png      # Wallpaper for Debian theme
+├── requirements.txt               # Hashed Python dependency lock
 ├── output.gif                    # Generated GIF (auto-updated by CI)
 ├── .env.example                  # Environment variable template
 └── .github/
@@ -158,7 +162,7 @@ GIT_USERNAME=your-username python generate_liquid_glass.py
 ```
 
 ### Skills and content
-All three scripts share the same `skills` list and stats sections. Edit whichever script you use.
+All three scripts use the shared `github_stats.py` adapter and have equivalent stats sections. Edit the generator you use for theme-specific layout or content.
 
 ### Theme-specific settings
 

@@ -1,9 +1,9 @@
 import gifos
 import os
 import glob
-import requests
 from PIL import Image, ImageFilter, ImageDraw, ImageChops
 from gifos.utils.convert_ansi_escape import ConvertAnsiEscape
+from github_stats import StatsFetchError, fetch_github_stats
 
 # Override with high-contrast colors for blue glass background.
 # Avoid cyan/blue tones — they blend with the wallpaper.
@@ -69,28 +69,11 @@ BG_COLOR     = (12, 14, 15)
 # GitHub stats (same as original)
 # ============================================
 
-def get_total_repos(username):
-    try:
-        response = requests.get(f"https://api.github.com/users/{username}")
-        if response.status_code == 200:
-            return response.json().get("public_repos", 0)
-    except Exception:
-        pass
-    return None
-
+GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN") or ""
 try:
-    github_stats = gifos.utils.fetch_github_stats(user_name=USERNAME)
-    has_stats = github_stats is not None
-    if not has_stats:
-        print("Warning: Could not fetch GitHub stats")
-        print("Configure GITHUB_TOKEN in .env file")
-except (Exception, SystemExit) as e:
-    print(f"Warning: Error fetching GitHub stats: {e}")
-    print("Using example data...")
-    has_stats = False
-    github_stats = None
-
-total_repos = get_total_repos(USERNAME)
+    github_stats = fetch_github_stats(USERNAME, token=GITHUB_TOKEN)
+except StatsFetchError as exc:
+    raise SystemExit(f"GitHub stats fetch failed: {exc}") from exc
 
 
 # ============================================
@@ -270,33 +253,19 @@ t.gen_text("", row_num=4)
 t.gen_text(f"\x1b[96m=== GitHub Stats for {USERNAME} ===\x1b[0m", row_num=5)
 t.clone_frame(3)
 
-if has_stats:
-    repos_count = total_repos if total_repos else github_stats.total_repo_contributions
-    stats_lines = [
-        f"\x1b[93mName:\x1b[0m        {github_stats.account_name or USERNAME}",
-        f"\x1b[93mFollowers:\x1b[0m   {github_stats.total_followers}",
-        f"\x1b[93mStars:\x1b[0m       {github_stats.total_stargazers}",
-        f"\x1b[93mCommits:\x1b[0m     {github_stats.total_commits_last_year} (last year)",
-        f"\x1b[93mPRs:\x1b[0m         {github_stats.total_pull_requests_made}",
-        f"\x1b[93mIssues:\x1b[0m      {github_stats.total_issues}",
-        f"\x1b[93mRepos:\x1b[0m       {repos_count}",
-        f"\x1b[93mRank:\x1b[0m        {github_stats.user_rank.level} ({github_stats.user_rank.percentile:.1f}%)",
-    ]
-    if github_stats.languages_sorted:
-        top_langs = github_stats.languages_sorted[:3]
-        langs_str = ", ".join([f"{lang[0]} ({lang[1]}%)" for lang in top_langs])
-        stats_lines.append(f"\x1b[93mTop Langs:\x1b[0m   {langs_str}")
-else:
-    stats_lines = [
-        f"\x1b[93mName:\x1b[0m        {USERNAME}",
-        "\x1b[93mFollowers:\x1b[0m   --",
-        "\x1b[93mStars:\x1b[0m       --",
-        "\x1b[93mCommits:\x1b[0m     -- (configure GITHUB_TOKEN)",
-        "\x1b[93mPRs:\x1b[0m         --",
-        "\x1b[93mIssues:\x1b[0m      --",
-        "\x1b[93mRepos:\x1b[0m       --",
-        "\x1b[93mRank:\x1b[0m        --",
-    ]
+stats_lines = [
+    f"\x1b[93mName:\x1b[0m        {github_stats.name}",
+    f"\x1b[93mFollowers:\x1b[0m   {github_stats.followers}",
+    f"\x1b[93mStars:\x1b[0m       {github_stats.stars}",
+    f"\x1b[93mCommits:\x1b[0m     {github_stats.commits}",
+    f"\x1b[93mPRs:\x1b[0m         {github_stats.prs}",
+    f"\x1b[93mIssues:\x1b[0m      {github_stats.issues}",
+    f"\x1b[93mRepos:\x1b[0m       {github_stats.repos}",
+]
+if github_stats.top_languages:
+    stats_lines.append(
+        f"\x1b[93mTop Langs:\x1b[0m   {', '.join(github_stats.top_languages[:3])}"
+    )
 
 for i, line in enumerate(stats_lines):
     t.gen_text(line, row_num=6 + i)

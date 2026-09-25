@@ -16,4 +16,7 @@ frames/
 # Dev scripts
 debug_stats.py
 
-# output.gif is intentionally tracked — it is the artifact committed by CI
+# Deepwork local state
+.slim/deepwork/
+
+# output.gif is intentionally tracked — the artifact committed by CI

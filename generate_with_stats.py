@@ -1,7 +1,8 @@
 import gifos
-import os, glob, requests
+import os, glob
 from PIL import Image, ImageFilter, ImageDraw, ImageFont, ImageChops
 from gifos.utils.convert_ansi_escape import ConvertAnsiEscape
+from github_stats import StatsFetchError, fetch_github_stats
 
 ConvertAnsiEscape.ANSI_ESCAPE_MAP_TXT_COLOR.update({
     "39": "#F2F2F2", "31": "#CC0000", "32": "#4EAA25",
@@ -33,45 +34,27 @@ FRAME_BASE    = "frame_"
 OUTPUT_GIF    = "output.gif"
 GIFOS_FPS     = 18
 
-GIT_TOKEN = os.environ.get("GITHUB_TOKEN") or os.environ.get("GH_TOKEN") or ""
-HDR = {"Authorization": f"Bearer {GIT_TOKEN}", "Accept": "application/vnd.github+json"} if GIT_TOKEN else {}
-HDR2 = {"Accept": "application/vnd.github+json"}
-
-STATS = {"name": "", "repos": 0, "commits": 0, "stars": 0, "prs": 0, "issues": 0, "followers": 0, "langs": []}
+GITHUB_TOKEN = os.environ.get("GITHUB_TOKEN") or ""
 try:
-    u = requests.get(f"https://api.github.com/users/{USERNAME}", headers=HDR, timeout=10).json()
-    STATS["name"] = u.get("name") or USERNAME
-    STATS["repos"] = u.get("public_repos", 0)
-    STATS["followers"] = u.get("followers", 0)
+    github_stats = fetch_github_stats(USERNAME, token=GITHUB_TOKEN)
+except StatsFetchError as exc:
+    raise SystemExit(f"GitHub stats fetch failed: {exc}") from exc
 
-    repos = requests.get(f"https://api.github.com/users/{USERNAME}/repos?per_page=100&sort=updated", headers=HDR2, timeout=15).json() or []
-    lc = {}
-    for r in repos:
-        l = r.get("language")
-        if l: lc[l] = lc.get(l, 0) + 1
-        STATS["stars"] += r.get("stargazers_count", 0)
-        STATS["issues"] += r.get("open_issues_count", 0)
-    STATS["langs"] = [l for l,_ in sorted(lc.items(), key=lambda x: -x[1])[:4]]
-
-    try:
-        c_hdr = dict(HDR2)
-        c_hdr["Accept"] = "application/vnd.github.cloak-preview"
-        cq = f"author:{USERNAME}"
-        cs = requests.get(f"https://api.github.com/search/commits?q={cq}&per_page=1", headers=c_hdr, timeout=10).json()
-        if "total_count" in cs:
-            STATS["commits"] = cs["total_count"]
-    except:
-        pass
-
-    pq = f"is:pr author:{USERNAME} is:merged"
-    pr = requests.get(f"https://api.github.com/search/issues?q={pq}&per_page=1", headers=HDR2, timeout=10).json()
-    STATS["prs"] = pr.get("total_count", 0)
-
-    print(f"Stats: name='{STATS['name']}' repos={STATS['repos']} commits={STATS['commits']} stars={STATS['stars']} prs={STATS['prs']} issues={STATS['issues']} followers={STATS['followers']} langs={STATS['langs']}")
-    has_stats = True
-except Exception as e:
-    print(f"Stats fetch error: {e}, repos count: {STATS['repos']}")
-    has_stats = False
+STATS = {
+    "name": github_stats.name,
+    "repos": github_stats.repos,
+    "commits": github_stats.commits,
+    "stars": github_stats.stars,
+    "prs": github_stats.prs,
+    "issues": github_stats.issues,
+    "followers": github_stats.followers,
+    "langs": list(github_stats.top_languages),
+}
+print(
+    f"Stats: name='{STATS['name']}' repos={STATS['repos']} "
+    f"commits={STATS['commits']} stars={STATS['stars']} prs={STATS['prs']} "
+    f"issues={STATS['issues']} followers={STATS['followers']} langs={STATS['langs']}"
+)
 
 def _blend(b, o):
     return Image.alpha_composite(b.convert("RGBA"), o).convert("RGB")
@@ -163,24 +146,17 @@ t.gen_text("", row_num=5)
 t.gen_text(f"\x1b[96m--- {USERNAME} ---\x1b[0m", row_num=6)
 t.clone_frame(2)
 
-if has_stats:
-    sl = [
-        f"\x1b[93mName:\x1b[0m      {STATS['name']}",
-        f"\x1b[93mRepos:\x1b[0m     {STATS['repos']}",
-        f"\x1b[93mCommits:\x1b[0m   {STATS['commits']}",
-        f"\x1b[93mStars:\x1b[0m     {STATS['stars']}",
-        f"\x1b[93mPRs:\x1b[0m       {STATS['prs']}",
-        f"\x1b[93mIssues:\x1b[0m    {STATS['issues']}",
-        f"\x1b[93mFollowers:\x1b[0m {STATS['followers']}",
-    ]
-    if STATS['langs']:
-        sl.append(f"\x1b[93mLangs:\x1b[0m     {', '.join(STATS['langs'])}")
-else:
-    sl = [
-        f"\x1b[93mName:\x1b[0m      Kim Phillip G. Andador",
-        f"\x1b[93mRepos:\x1b[0m     {STATS['repos'] if STATS['repos'] else '--'}",
-        f"\x1b[93mFollowers:\x1b[0m {STATS['followers'] if STATS['followers'] else '--'}",
-    ]
+sl = [
+    f"\x1b[93mName:\x1b[0m      {STATS['name']}",
+    f"\x1b[93mRepos:\x1b[0m     {STATS['repos']}",
+    f"\x1b[93mCommits:\x1b[0m   {STATS['commits']}",
+    f"\x1b[93mStars:\x1b[0m     {STATS['stars']}",
+    f"\x1b[93mPRs:\x1b[0m       {STATS['prs']}",
+    f"\x1b[93mIssues:\x1b[0m    {STATS['issues']}",
+    f"\x1b[93mFollowers:\x1b[0m {STATS['followers']}",
+]
+if STATS['langs']:
+    sl.append(f"\x1b[93mLangs:\x1b[0m     {', '.join(STATS['langs'])}")
 
 for l in sl:
     t.gen_text(l, row_num=7+sl.index(l))
