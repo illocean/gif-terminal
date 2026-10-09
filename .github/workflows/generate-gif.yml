@@ -54,7 +54,10 @@ jobs:
 
       - name: Generate GIF
         env:
-          GITHUB_TOKEN: ${{ github.token }}
+          # Account-wide read scope: github.token is repo-scoped and reads as
+          # anonymous on /search/*, which undercounts commits/PRs and hides
+          # private repos. ponytail: falls back to public-only stats if unset.
+          GITHUB_TOKEN: ${{ secrets.STATS_TOKEN || github.token }}
           GITHUB_REPOSITORY_OWNER: ${{ github.repository_owner }}
           THEME: ${{ inputs.theme || vars.THEME || 'default' }}
         run: |
